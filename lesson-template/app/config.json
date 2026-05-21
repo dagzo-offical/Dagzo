@@ -1,0 +1,16 @@
+{
+  "name": "Matematika 5-sinf",
+  "publisher": "Dagzo Education",
+  "version": "1.0.0",
+  "description": "5-sinf matematika darslari",
+  "icon": "assets/icon.png",
+  "start": "index.html",
+  "fullscreen": true,
+  "kiosk": false,
+  "language": "uz",
+  "subjects": ["matematika"],
+  "grade": 5,
+  "author": "Dagzo Education",
+  "created": "2024-01-01",
+  "updated": "2024-01-01"
+}

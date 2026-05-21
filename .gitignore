@@ -1,0 +1,45 @@
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Build outputs
+dist/
+dist-electron/
+build/
+apps/dagzo-learn/dist/
+apps/dagzo-learn/dist-electron/
+
+# Electron
+apps/dagzo-learn/*.snap
+
+# OS / live-build output
+build/
+*.iso
+*.img
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Temp files
+*.tmp
+*.temp
+
+# Compiled Python
+__pycache__/
+*.pyc

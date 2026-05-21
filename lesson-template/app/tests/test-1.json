@@ -1,0 +1,48 @@
+{
+  "id": "test-1",
+  "title": "Sonlar va amallar — Test",
+  "timeLimit": 600,
+  "passingScore": 60,
+  "questions": [
+    {
+      "id": 1,
+      "question": "45 + 37 = ?",
+      "type": "single",
+      "options": ["72", "82", "73", "84"],
+      "answer": 1,
+      "explanation": "45 + 37 = 82"
+    },
+    {
+      "id": 2,
+      "question": "2 + 3 × 4 = ?",
+      "type": "single",
+      "options": ["20", "11", "14", "24"],
+      "answer": 2,
+      "explanation": "Ko'paytirish qo'shishdan oldin: 2 + 12 = 14"
+    },
+    {
+      "id": 3,
+      "question": "√64 = ?",
+      "type": "single",
+      "options": ["6", "7", "8", "9"],
+      "answer": 2,
+      "explanation": "8 × 8 = 64, shuning uchun √64 = 8"
+    },
+    {
+      "id": 4,
+      "question": "144 ÷ 12 = ?",
+      "type": "single",
+      "options": ["10", "11", "12", "13"],
+      "answer": 2,
+      "explanation": "144 ÷ 12 = 12"
+    },
+    {
+      "id": 5,
+      "question": "Qaysi son eng katta?",
+      "type": "single",
+      "options": ["½", "0.4", "0.55", "0.499"],
+      "answer": 2,
+      "explanation": "½ = 0.5 — eng katta qiymat"
+    }
+  ]
+}

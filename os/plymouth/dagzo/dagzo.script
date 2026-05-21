@@ -1,0 +1,100 @@
+# Dagzo OS Plymouth boot splash script
+
+wallpaper_image = Image("boot.png");
+screen_width = Window.GetWidth();
+screen_height = Window.GetHeight();
+
+# Boot splash background
+fun setup_background() {
+    bg = Sprite(wallpaper_image.Scale(screen_width, screen_height));
+    bg.SetX(0);
+    bg.SetY(0);
+    bg.SetZ(-100);
+}
+
+# Progress bar
+progress_box_width = 400;
+progress_box_height = 6;
+progress_box_x = (screen_width - progress_box_width) / 2;
+progress_box_y = screen_height * 0.82;
+
+fun draw_progress_bar(progress) {
+    # Track (background)
+    track = SpriteImage(progress_box_width, progress_box_height);
+    track_pixel = track.GetPixel(0, 0);
+    track_pixel.SetColor(0.1, 0.1, 0.2, 0.6);
+    for (x = 0; x < progress_box_width; x++) {
+        for (y = 0; y < progress_box_height; y++) {
+            track.SetPixel(x, y, track_pixel);
+        }
+    }
+    track_sprite = Sprite(track);
+    track_sprite.SetX(progress_box_x);
+    track_sprite.SetY(progress_box_y);
+    track_sprite.SetZ(1);
+
+    # Fill
+    fill_width = Math.Int(progress_box_width * progress);
+    if (fill_width > 0) {
+        fill = SpriteImage(fill_width, progress_box_height);
+        fill_pixel = fill.GetPixel(0, 0);
+        fill_pixel.SetColor(0.31, 0.28, 0.89, 1.0);
+        for (x = 0; x < fill_width; x++) {
+            for (y = 0; y < progress_box_height; y++) {
+                fill.SetPixel(x, y, fill_pixel);
+            }
+        }
+        fill_sprite = Sprite(fill);
+        fill_sprite.SetX(progress_box_x);
+        fill_sprite.SetY(progress_box_y);
+        fill_sprite.SetZ(2);
+    }
+}
+
+# "Dagzo" text label
+fun draw_label() {
+    label = Image.Text("Dagzo OS", 1.0, 1.0, 1.0, 1.0, "Sans 18");
+    label_sprite = Sprite(label);
+    label_sprite.SetX((screen_width - label.GetWidth()) / 2);
+    label_sprite.SetY(progress_box_y - 40);
+    label_sprite.SetZ(2);
+}
+
+# Boot message
+message_sprite = NULL;
+fun display_message_callback(text) {
+    if (message_sprite != NULL) {
+        message_sprite.SetImage(NULL);
+    }
+    msg_img = Image.Text(text, 0.6, 0.6, 0.8, 1.0, "Sans 10");
+    message_sprite = Sprite(msg_img);
+    message_sprite.SetX((screen_width - msg_img.GetWidth()) / 2);
+    message_sprite.SetY(progress_box_y + 20);
+    message_sprite.SetZ(2);
+}
+
+Plymouth.SetDisplayMessageFunction(display_message_callback);
+
+# Progress callback
+progress = 0;
+fun boot_progress_callback(duration, progress_val) {
+    progress = progress_val;
+    draw_progress_bar(progress);
+}
+
+Plymouth.SetBootProgressFunction(boot_progress_callback);
+
+# Password dialog (for encryption)
+fun display_password_callback(prompt, dots) {
+    label = Image.Text(prompt, 1.0, 1.0, 1.0, 1.0, "Sans 12");
+    label_sprite = Sprite(label);
+    label_sprite.SetX((screen_width - label.GetWidth()) / 2);
+    label_sprite.SetY(screen_height / 2);
+}
+
+Plymouth.SetDisplayPasswordFunction(display_password_callback);
+
+# Initialization
+setup_background();
+draw_label();
+draw_progress_bar(0);

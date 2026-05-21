@@ -1,0 +1,14 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Dagzo Learn
+Name[uz]=Dagzo Learn
+Comment=Dagzo OS o'quv dasturi
+Comment[uz]=Dagzo OS ta'lim platformasi
+Exec=/opt/dagzo/dagzo-learn/dagzo-learn --no-sandbox
+Icon=/opt/dagzo/branding/icon.png
+Terminal=false
+Categories=Education;Science;
+Keywords=dagzo;education;learning;ta'lim;
+StartupNotify=true
+StartupWMClass=dagzo-learn

@@ -1,0 +1,17 @@
+[Unit]
+Description=Dagzo Learn Autostart Service
+After=graphical-session.target
+Wants=graphical-session.target
+
+[Service]
+Type=simple
+User=dagzo
+Environment=DISPLAY=:0
+Environment=XAUTHORITY=/home/dagzo/.Xauthority
+ExecStartPre=/bin/sleep 3
+ExecStart=/opt/dagzo/dagzo-learn/dagzo-learn --no-sandbox
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=graphical-session.target

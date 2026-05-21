@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Dagzo Learn Autostart
+Comment=Dagzo Learn ni tizim yoqilganda avtomatik ochish
+Exec=/opt/dagzo/dagzo-learn/dagzo-learn --no-sandbox
+Icon=/opt/dagzo/branding/icon.png
+Hidden=false
+NoDisplay=false
+X-GNOME-Autostart-enabled=true
+X-XFCE-Autostart-Override=true

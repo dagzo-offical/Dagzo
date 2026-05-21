@@ -1,0 +1,53 @@
+# Dagzo OS — asosiy paketlar
+
+# XFCE Desktop
+xfce4
+xfce4-terminal
+xfce4-panel
+xfce4-settings
+xfce4-session
+xfce4-notifyd
+xfwm4
+xfdesktop4
+thunar
+thunar-volman
+lightdm
+lightdm-gtk-greeter
+
+# Plymouth boot splash
+plymouth
+plymouth-themes
+
+# Asosiy utilitalar
+network-manager
+network-manager-gnome
+bash
+curl
+wget
+git
+sudo
+software-properties-common
+
+# Audio/video
+pulseaudio
+gstreamer1.0-plugins-base
+gstreamer1.0-plugins-good
+gstreamer1.0-tools
+
+# Fayl uchun
+file-roller
+evince
+vlc
+
+# Wine (.exe fayllar uchun)
+wine
+wine64
+
+# Node.js (Dagzo Learn uchun)
+nodejs
+npm
+
+# Boshqa
+fonts-dejavu
+fonts-liberation
+fontconfig

@@ -1,0 +1,56 @@
+# Dagzo GRUB2 Theme
+
+desktop-color: "#0a0a0f"
+title-color: "#4f46e5"
+title-text: "Dagzo OS"
+message-color: "#8888aa"
+message-bg-color: "#0a0a0f"
+
++ label {
+    top = 30%
+    left = 5%
+    width = 90%
+    height = 40
+    text = "Dagzo OS"
+    color = "#4f46e5"
+    font = "Sans Bold 28"
+    align = "center"
+}
+
++ label {
+    top = 38%
+    left = 5%
+    width = 90%
+    height = 20
+    text = "Education Operating System"
+    color = "#8888aa"
+    font = "Sans 14"
+    align = "center"
+}
+
++ boot_menu {
+    left = 15%
+    top = 45%
+    width = 70%
+    height = 50%
+    item_font = "Sans 14"
+    item_color = "#ccccee"
+    selected_item_color = "#ffffff"
+    selected_item_pixmap_style = "sel_*"
+    item_height = 40
+    item_padding = 15
+    icon_width = 0
+    icon_height = 0
+    scrollbar = false
+}
+
++ progress_bar {
+    id = "__timeout__"
+    left = 15%
+    top = 92%
+    width = 70%
+    height = 4
+    fg_color = "#4f46e5"
+    bg_color = "#1e1e3a"
+    border_color = "#1e1e3a"
+}
