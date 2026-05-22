@@ -284,11 +284,11 @@ export default function Settings() {
             }}>
               <span style={{ color: 'var(--text-secondary)', fontSize: 13 }}>{key}</span>
               <span style={{
-                fontWeight: 500, fontSize: 13,
+                fontWeight: 500,
+                fontSize: key === 'Branding papkasi' ? 11 : 13,
                 color: key === 'OS nomi' ? 'var(--accent-cyan)' : 'var(--text-primary)',
                 maxWidth: 260, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                 fontFamily: key === 'Branding papkasi' ? 'monospace' : 'inherit',
-                fontSize: key === 'Branding papkasi' ? 11 : 13,
               }}>
                 {val}
               </span>
