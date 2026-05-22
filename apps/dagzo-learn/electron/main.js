@@ -32,7 +32,6 @@ function resolveBackendPath() {
 
   const candidates = [
     path.join(process.resourcesPath, 'app.asar.unpacked', 'backend', 'server.js'),
-    path.join(process.resourcesPath, 'app.asar', 'backend', 'server.js'),
     path.join(process.resourcesPath, 'app', 'backend', 'server.js'),
     path.join(__dirname, '../backend', 'server.js'),
   ]

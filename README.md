@@ -131,8 +131,9 @@ bash scripts/build-app.sh
 
 Bu qadam:
 - Branding rasmlarini `apps/dagzo-learn/public/` ga ko'chiradi
+- `icon.png` → `icon.ico` konvertatsiyasi (ImageMagick, Windows build uchun)
 - React (Vite) build qiladi → `apps/dagzo-learn/dist/`
-- Electron Linux build qiladi → `apps/dagzo-learn/dist-electron/`
+- Electron Linux build qiladi → `apps/dagzo-learn/dist-electron/linux-unpacked/` (**ISO uchun tavsiya etilgan format**)
 
 ### 4. ISO build (root kerak)
 
@@ -145,7 +146,9 @@ sudo bash scripts/build-os.sh
 Build jarayoni avtomatik bajaradi:
 - live-build sozlash (Debian Bookworm amd64, XFCE4)
 - Branding, app va Plymouth theme fayllarni chroot ichiga inject qilish
+- App inject tartibi: **linux-unpacked** birinchi (FUSE talab qilmaydi), AppImage faqat fallback
 - 3 ta post-install hook ishga tushirish (os-release, Plymouth, Dagzo Learn setup)
+- Autostart `/etc/xdg/autostart/dagzo-learn.desktop` orqali (systemd user service emas)
 - ISO compress va package qilish
 
 ### 5. USB ga yozish
@@ -334,16 +337,28 @@ sudo update-initramfs -u
 
 ### Dagzo Learn ishga tushmayapti
 
+ISO ichida tavsiya etilgan format — **linux-unpacked** (`/opt/dagzo/dagzo-learn/dagzo-learn` binary).  
+AppImage faqat linux-unpacked topilmasa fallback sifatida ishlatiladi va `libfuse2` talab qiladi.
+
 ```bash
-# Terminal orqali sinash (xato xabarini ko'rish uchun)
+# 1. Terminal orqali sinash — xato xabarini ko'rish
 /opt/dagzo/dagzo-learn/dagzo-learn --no-sandbox
 
-# AppImage FUSE xatosi bo'lsa
+# 2. Live ISO loglarini ko'rish
+ls /var/log/live/
+cat /var/log/live/boot.log 2>/dev/null || journalctl -b | grep dagzo
+
+# 3. Binary mavjudligini tekshirish
+ls -la /opt/dagzo/dagzo-learn/dagzo-learn
+file /opt/dagzo/dagzo-learn/dagzo-learn
+
+# 4. AppImage fallback bo'lsa va FUSE xatosi bo'lsa
 sudo apt-get install libfuse2
-# yoki
+# yoki extracted rejimda:
 /opt/dagzo/dagzo-learn/dagzo-learn.AppImage --appimage-extract-and-run
 
-# Binary yo'q bo'lsa — qayta o'rnatish
+# 5. Binary yo'q bo'lsa — qayta inject qiling va ISO qayta build qiling
+#    yoki mavjud tizimga o'rnatish:
 sudo bash scripts/install-dagzo-learn.sh
 ```
 

@@ -282,10 +282,9 @@ elif [[ -f "$INSTALL_DIR/dagzo-learn" ]]; then
     echo "[dagzo] dagzo-learn binary ruxsati berildi"
 fi
 
-# Autostart yoqish
-if command -v systemctl &>/dev/null; then
-    systemctl enable dagzo-learn-autostart.service 2>/dev/null || true
-fi
+# Autostart XDG .desktop orqali (/etc/xdg/autostart) ishlaydi.
+# systemctl enable chroot ichida noto'g'ri ishlashi mumkin — skip.
+# systemctl enable dagzo-learn-autostart.service 2>/dev/null || true
 
 echo "[dagzo] Dagzo Learn setup yakunlandi"
 HOOK

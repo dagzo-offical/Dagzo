@@ -46,6 +46,13 @@ wine64
 # AppImage fallback uchun (linux-unpacked topilmasa)
 libfuse2
 
+# Desktop integration va Electron uchun
+desktop-file-utils
+hicolor-icon-theme
+xdg-utils
+dbus-x11
+policykit-1
+
 # Node.js (Dagzo Learn uchun)
 nodejs
 npm
