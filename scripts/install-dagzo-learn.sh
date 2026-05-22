@@ -85,11 +85,17 @@ setup_dirs() {
     log_success "Papkalar tayyor"
 }
 
-# Fix #5: Electron binary / AppImage o'rnatish — real build output nomiga mos
+# Electron binary o'rnatish — linux-unpacked birinchi (FUSE talab qilmaydi), AppImage fallback
 install_binary() {
-    # 1. AppImage — electron-builder har xil nom berishi mumkin
-    #    package.json "executableName": "dagzo-learn" bilan AppImage nomi:
-    #    "Dagzo Learn-1.0.0.AppImage" yoki "dagzo-learn-1.0.0.AppImage"
+    # 1. linux-unpacked — eng ishonchli variant, libfuse2 talab qilmaydi
+    if [[ -f "$APP_DIR/dist-electron/linux-unpacked/dagzo-learn" ]]; then
+        cp -r "$APP_DIR/dist-electron/linux-unpacked/." "$INSTALL_DIR/"
+        chmod +x "$INSTALL_DIR/dagzo-learn"
+        log_success "linux-unpacked binary o'rnatildi: $INSTALL_DIR/dagzo-learn"
+        return 0
+    fi
+
+    # 2. AppImage — fallback (libfuse2 kerak bo'lishi mumkin)
     local appimage
     appimage=$(ls "$APP_DIR/dist-electron/"*.AppImage 2>/dev/null | head -1)
     if [[ -n "$appimage" ]]; then
@@ -98,14 +104,7 @@ install_binary() {
         # Relative symlink: dagzo-learn → dagzo-learn.AppImage
         ln -sf dagzo-learn.AppImage "$INSTALL_DIR/dagzo-learn"
         log_success "AppImage o'rnatildi: $(basename "$appimage") → dagzo-learn"
-        return 0
-    fi
-
-    # 2. linux-unpacked — "executableName": "dagzo-learn" bilan binary nomi aniq
-    if [[ -f "$APP_DIR/dist-electron/linux-unpacked/dagzo-learn" ]]; then
-        cp -r "$APP_DIR/dist-electron/linux-unpacked/." "$INSTALL_DIR/"
-        chmod +x "$INSTALL_DIR/dagzo-learn"
-        log_success "linux-unpacked binary o'rnatildi: $INSTALL_DIR/dagzo-learn"
+        log_warn "AppImage ishlatilmoqda — muammo bo'lsa: sudo apt-get install libfuse2"
         return 0
     fi
 

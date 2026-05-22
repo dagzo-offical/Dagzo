@@ -35,8 +35,8 @@ check_node() {
 
     local node_ver
     node_ver=$(node -v | cut -d'v' -f2 | cut -d'.' -f1)
-    if [[ $node_ver -lt 16 ]]; then
-        log_error "Node.js 16+ kerak. Joriy versiya: $(node -v)"
+    if [[ $node_ver -lt 18 ]]; then
+        log_error "Node.js 18+ kerak. Joriy versiya: $(node -v). Yuklab olish: https://nodejs.org"
     fi
     log_info "Node.js $(node -v), npm $(npm -v)"
 }
