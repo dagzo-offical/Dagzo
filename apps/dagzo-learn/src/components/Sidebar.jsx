@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
 import {
   Home, BookOpen, BookMarked, Play, FileQuestion,
@@ -16,6 +17,20 @@ const NAV_ITEMS = [
 
 export default function Sidebar({ onAdminExit, onExit }) {
   const location = useLocation()
+  const [iconSrc, setIconSrc] = useState(null)
+
+  useEffect(() => {
+    if (window.dagzo) {
+      window.dagzo.getBrandingDir().then((dir) => {
+        if (dir) {
+          const filePath = dir.startsWith('/')
+            ? `file://${dir}/icon.png`
+            : `file:///${dir}/icon.png`
+          setIconSrc(filePath)
+        }
+      }).catch(() => {})
+    }
+  }, [])
 
   return (
     <aside style={{
@@ -37,12 +52,25 @@ export default function Sidebar({ onAdminExit, onExit }) {
       }}>
         <div style={{
           width: 40, height: 40,
-          background: 'var(--gradient-aurora)',
+          background: iconSrc ? 'transparent' : 'var(--gradient-aurora)',
           borderRadius: 10,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           fontSize: 18, fontWeight: 800, color: 'white',
-          flexShrink: 0,
-        }}>D</div>
+          flexShrink: 0, overflow: 'hidden',
+        }}>
+          {iconSrc ? (
+            <img
+              src={iconSrc}
+              alt="Dagzo"
+              style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 10 }}
+              onError={(e) => {
+                e.target.style.display = 'none'
+                e.target.parentElement.style.background = 'var(--gradient-aurora)'
+                e.target.parentElement.textContent = 'D'
+              }}
+            />
+          ) : 'D'}
+        </div>
         <div>
           <div style={{ fontWeight: 700, fontSize: 16, color: 'var(--text-primary)' }}>
             Dagzo Learn

@@ -6,7 +6,9 @@
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-APP_DIR="$(dirname "$SCRIPT_DIR")/apps/dagzo-learn"
+PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+APP_DIR="$PROJECT_ROOT/apps/dagzo-learn"
+BRANDING_DIR="$PROJECT_ROOT/assets/branding"
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -32,6 +34,31 @@ check_node() {
         log_error "Node.js 16+ kerak. Joriy versiya: $(node -v)"
     fi
     log_info "Node.js $(node -v), npm $(npm -v)"
+}
+
+# Branding fayllarini public/ ga ko'chirish (Electron build uchun)
+copy_branding() {
+    log_info "Branding fayllar public/ ga ko'chirilmoqda..."
+    mkdir -p "$APP_DIR/public/wallpapers"
+
+    # App icon
+    if [[ -f "$BRANDING_DIR/icon.png" ]]; then
+        cp "$BRANDING_DIR/icon.png" "$APP_DIR/public/icon.png"
+        log_success "icon.png → public/icon.png"
+    else
+        log_info "icon.png topilmadi (${BRANDING_DIR}/icon.png) — skip"
+    fi
+
+    # Wallpaperlar (Settings sahifasi uchun thumbnail)
+    local wcount=0
+    for i in $(seq 1 10); do
+        local src="$BRANDING_DIR/wallpapers/wallpaper-$i.png"
+        if [[ -f "$src" ]]; then
+            cp "$src" "$APP_DIR/public/wallpapers/wallpaper-$i.png"
+            ((wcount++)) || true
+        fi
+    done
+    [[ $wcount -gt 0 ]] && log_success "$wcount ta wallpaper → public/wallpapers/"
 }
 
 # npm install
@@ -81,6 +108,7 @@ echo -e "${CYAN}╚════════════════════�
 echo ""
 
 check_node
+copy_branding
 install_deps
 build_react
 

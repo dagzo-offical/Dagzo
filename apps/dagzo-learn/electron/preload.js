@@ -19,6 +19,10 @@ contextBridge.exposeInMainWorld('dagzo', {
   openExe: (filePath) => ipcRenderer.invoke('open-exe', filePath),
   openFile: (filePath) => ipcRenderer.invoke('open-file', filePath),
 
+  // Branding
+  getBrandingDir: () => ipcRenderer.invoke('get-branding-dir'),
+  setWallpaper: (wallpaperId) => ipcRenderer.invoke('set-wallpaper', wallpaperId),
+
   // Tizim
   getSystemInfo: () => ipcRenderer.invoke('get-system-info'),
 

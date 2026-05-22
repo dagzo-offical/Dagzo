@@ -5,7 +5,11 @@ const fs = require('fs')
 
 const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged
 
-// Admin password (production'da env var yoki encrypted config dan o'qish kerak)
+// Branding papkasi: dev — loyiha ichida, production — /opt/dagzo/branding/
+const BRANDING_DIR = isDev
+  ? path.join(__dirname, '../../assets/branding')
+  : '/opt/dagzo/branding'
+
 const ADMIN_PASSWORD = process.env.DAGZO_ADMIN_PASSWORD || 'dagzo2024'
 
 let mainWindow = null
@@ -20,7 +24,7 @@ function createMainWindow() {
     frame: false,
     titleBarStyle: 'hidden',
     backgroundColor: '#0a0a0f',
-    icon: path.join(__dirname, '../public/icon.png'),
+    icon: path.join(BRANDING_DIR, 'icon.png'),
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
@@ -211,6 +215,43 @@ ipcMain.handle('open-file', async (event, filePath) => {
     shell.openPath(filePath)
     return { success: true }
   }
+})
+
+// Branding papkasi yo'lini qaytarish
+ipcMain.handle('get-branding-dir', async () => {
+  return BRANDING_DIR
+})
+
+// XFCE wallpaper o'zgartirish (xfconf-query orqali)
+ipcMain.handle('set-wallpaper', async (event, wallpaperId) => {
+  const wallpaperPath = path.join(BRANDING_DIR, 'wallpapers', `wallpaper-${wallpaperId}.png`)
+
+  if (!fs.existsSync(wallpaperPath)) {
+    return { success: false, error: `Wallpaper topilmadi: ${wallpaperPath}` }
+  }
+
+  return new Promise((resolve) => {
+    // Barcha monitor va workspacelar uchun wallpaper o'rnatish
+    const monitors = [0, 1, 2]
+    const promises = monitors.map(
+      (m) =>
+        new Promise((res) => {
+          exec(
+            `xfconf-query -c xfce4-desktop \
+              -p "/backdrop/screen0/monitor${m}/workspace0/last-image" \
+              -s "${wallpaperPath}" 2>/dev/null`,
+            () => res()
+          )
+        })
+    )
+
+    Promise.all(promises).then(() => {
+      // xfdesktop refresh
+      exec('xfdesktop --reload 2>/dev/null || true', () => {
+        resolve({ success: true, path: wallpaperPath })
+      })
+    })
+  })
 })
 
 ipcMain.handle('get-system-info', async () => {
