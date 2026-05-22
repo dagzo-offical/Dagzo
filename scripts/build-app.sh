@@ -12,12 +12,17 @@ BRANDING_DIR="$PROJECT_ROOT/assets/branding"
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
 CYAN='\033[0;36m'
 NC='\033[0m'
 
 log_info()    { echo -e "${CYAN}[INFO]${NC} $1"; }
 log_success() { echo -e "${GREEN}[OK]${NC} $1"; }
+log_warn()    { echo -e "${YELLOW}[WARN]${NC} $1"; }
 log_error()   { echo -e "${RED}[ERROR]${NC} $1"; exit 1; }
+
+# Windows build uchun zarur shart (create_ico tekshiradi)
+CAN_BUILD_WIN=true
 
 # Node.js tekshirish
 check_node() {
@@ -34,6 +39,38 @@ check_node() {
         log_error "Node.js 16+ kerak. Joriy versiya: $(node -v)"
     fi
     log_info "Node.js $(node -v), npm $(npm -v)"
+}
+
+# icon.png → icon.ico (Windows build uchun, ImageMagick convert kerak)
+create_ico() {
+    local icon_src="$BRANDING_DIR/icon.png"
+    local ico_dest="$APP_DIR/public/icon.ico"
+
+    if [[ ! -f "$icon_src" ]]; then
+        log_warn "icon.png topilmadi ($icon_src) — icon.ico yaratilmadi, Windows build skip"
+        CAN_BUILD_WIN=false
+        return
+    fi
+
+    if ! command -v convert &>/dev/null; then
+        log_warn "ImageMagick 'convert' topilmadi — icon.ico yaratib bo'lmaydi"
+        log_warn "O'rnatish: sudo apt-get install imagemagick"
+        log_warn "Windows build skip qilinadi"
+        CAN_BUILD_WIN=false
+        return
+    fi
+
+    # Multi-size ICO: 256, 128, 64, 48, 32, 16 px
+    convert "$icon_src" \
+        -define icon:auto-resize=256,128,64,48,32,16 \
+        "$ico_dest" 2>/dev/null
+
+    if [[ -f "$ico_dest" ]]; then
+        log_success "icon.ico yaratildi (256/128/64/48/32/16 px): $ico_dest"
+    else
+        log_warn "icon.ico yaratishda xato — Windows build skip qilinadi"
+        CAN_BUILD_WIN=false
+    fi
 }
 
 # Branding fayllarini public/ ga ko'chirish (Electron build uchun)
@@ -87,15 +124,21 @@ build_electron_linux() {
 
 # Electron Windows build (Linux'da cross-compile)
 build_electron_win() {
+    if [[ "$CAN_BUILD_WIN" == false ]]; then
+        log_warn "Windows build skip: icon.ico yo'q yoki ImageMagick topilmadi"
+        log_warn "Yechim: sudo apt-get install imagemagick && assets/branding/icon.png ni qo'ying"
+        return
+    fi
+
     log_info "Electron Windows build qilinmoqda (cross-compile)..."
     cd "$APP_DIR"
 
     if ! command -v wine &>/dev/null; then
-        log_info "Wine o'rnatilmagan — Windows build o'tkazib yuboriladi"
+        log_warn "Wine o'rnatilmagan — Windows build o'tkazib yuboriladi"
         return
     fi
 
-    npm run dist:win || log_info "Windows build xato — Linux buildiga o'tildi"
+    npm run dist:win || log_warn "Windows build xato — Linux buildiga o'tildi"
 }
 
 # Main
@@ -108,6 +151,7 @@ echo -e "${CYAN}╚════════════════════�
 echo ""
 
 check_node
+create_ico
 copy_branding
 install_deps
 build_react

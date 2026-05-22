@@ -97,6 +97,8 @@ Branding rasmlari git'da saqlanmaydi. Build qilishdan **oldin** quyidagi joylarg
 - `boot.png` — 1920×1080 px, PNG
 - `wallpaper-*.png` — 1920×1080 px, PNG
 
+> **Windows build uchun:** `icon.ico` fayli `build-app.sh` tomonidan `icon.png` dan avtomatik yaratiladi. Buning uchun `imagemagick` o'rnatilgan bo'lishi shart. `icon.ico` topilmasa yoki `convert` yo'q bo'lsa Windows build skip qilinadi.
+
 > **Eslatma:** Rasmlar yo'q bo'lsa ISO build to'xtatilmaydi — ogohlantirish chiqadi va davom etadi. Lekin tizimda placeholder yoki bo'sh joy ko'rinadi.
 
 ---
@@ -258,6 +260,23 @@ bash scripts/build-lesson-linux.sh --format deb     --lesson lesson-template/app
 bash scripts/build-lesson-windows.sh --lesson lesson-template/app --name "Matematika_5"
 # Natija: dist/Matematika_5_Setup.exe
 ```
+
+### Windows uchun Dagzo Learn `.exe` build
+
+Windows build qilishdan oldin `imagemagick` o'rnatilgan bo'lishi kerak — `build-app.sh` `icon.png` → `icon.ico` konvertatsiyasini avtomatik bajaradi:
+
+```bash
+# Talab: imagemagick (icon.ico uchun) + wine (cross-compile uchun)
+sudo apt-get install imagemagick wine64
+
+# Windows build
+bash scripts/build-app.sh win
+# Natija: apps/dagzo-learn/dist-electron/Dagzo-Learn-Setup-*.exe
+```
+
+**Xato:** `[WARN] ImageMagick 'convert' topilmadi` — `imagemagick` o'rnatilmagan.  
+**Xato:** `[WARN] icon.png topilmadi` — `assets/branding/icon.png` qo'yilmagan.  
+Ikki holda ham Windows build avtomatik skip qilinadi (Linux build davom etadi).
 
 ---
 
