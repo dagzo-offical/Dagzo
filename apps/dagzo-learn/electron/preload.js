@@ -7,9 +7,12 @@ contextBridge.exposeInMainWorld('dagzo', {
   openLesson: (lessonId) => ipcRenderer.invoke('open-lesson', lessonId),
   closeLesson: () => ipcRenderer.invoke('close-lesson'),
 
-  // Admin
+  // Admin (parols iz)
   verifyAdminPassword: (password) => ipcRenderer.invoke('verify-admin-password', password),
-  adminExit: (password) => ipcRenderer.invoke('admin-exit', password),
+  adminExit: () => ipcRenderer.invoke('admin-exit'),
+
+  // Darslik o'rnatish
+  installLesson: () => ipcRenderer.invoke('install-lesson'),
 
   // UI
   toggleFullscreen: () => ipcRenderer.invoke('toggle-fullscreen'),

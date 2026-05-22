@@ -146,6 +146,12 @@ inject_branding() {
     mkdir -p "$ci/etc/systemd/user"
     cp "$PROJECT_ROOT/os/systemd/dagzo-learn-autostart.service" "$ci/etc/systemd/user/"
 
+    # dagzo-run-lesson — Python darslik launcher
+    mkdir -p "$ci/usr/local/bin"
+    cp "$PROJECT_ROOT/scripts/dagzo-run-lesson" "$ci/usr/local/bin/dagzo-run-lesson"
+    chmod +x "$ci/usr/local/bin/dagzo-run-lesson"
+    log_success "dagzo-run-lesson inject qilindi"
+
     # LightDM autologin — dagzo user, XFCE session
     mkdir -p "$ci/etc/lightdm/lightdm.conf.d"
     cat > "$ci/etc/lightdm/lightdm.conf.d/50-dagzo-autologin.conf" << 'LIGHTDM'
@@ -307,8 +313,45 @@ fi
 
 chown -R dagzo:dagzo /home/dagzo/ 2>/dev/null || true
 
-# /opt/dagzo papkalari
+# /opt/dagzo papkalari — dagzo user yoza olsin
 mkdir -p /opt/dagzo/apps /opt/dagzo/branding/wallpapers
+chown -R dagzo:dagzo /opt/dagzo/apps 2>/dev/null || true
+chmod 775 /opt/dagzo/apps 2>/dev/null || true
+
+# dagzo sudo passwordless
+if ! grep -q "dagzo ALL=(ALL) NOPASSWD" /etc/sudoers 2>/dev/null; then
+    echo "dagzo ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
+    echo "[dagzo] sudo NOPASSWD qo'shildi"
+fi
+
+# Firefox default browser
+if command -v update-alternatives &>/dev/null; then
+    update-alternatives --set x-www-browser /usr/bin/firefox-esr 2>/dev/null || true
+    update-alternatives --set gnome-www-browser /usr/bin/firefox-esr 2>/dev/null || true
+    echo "[dagzo] Firefox default browser sifatida sozlandi"
+fi
+
+# XFCE preferred applications — Firefox
+XFCE_MIMEAPPS="/etc/skel/.config/mimeapps.list"
+mkdir -p "$(dirname "$XFCE_MIMEAPPS")"
+cat > "$XFCE_MIMEAPPS" << 'MIMEAPPS'
+[Default Applications]
+text/html=firefox-esr.desktop
+x-scheme-handler/http=firefox-esr.desktop
+x-scheme-handler/https=firefox-esr.desktop
+x-scheme-handler/ftp=firefox-esr.desktop
+MIMEAPPS
+if [[ -d "/home/dagzo" ]]; then
+    cp "$XFCE_MIMEAPPS" /home/dagzo/.config/mimeapps.list 2>/dev/null || true
+    chown dagzo:dagzo /home/dagzo/.config/mimeapps.list 2>/dev/null || true
+fi
+echo "[dagzo] XFCE preferred browser: Firefox"
+
+# dagzo-run-lesson scriptni o'rnatish
+if [[ -f /usr/local/bin/dagzo-run-lesson ]]; then
+    chmod +x /usr/local/bin/dagzo-run-lesson
+    echo "[dagzo] dagzo-run-lesson script sozlandi"
+fi
 
 echo "[dagzo] Post-install hook yakunlandi"
 HOOK

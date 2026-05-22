@@ -1,0 +1,92 @@
+#!/bin/bash
+# dagzo-run-lesson — Python asosidagi darsliklarni ishga tushiruvchi
+# Ishlatish: dagzo-run-lesson /opt/dagzo/apps/lesson-name
+# Yoki:      dagzo-run-lesson /opt/dagzo/apps/lesson-name 8080
+
+set -e
+
+LESSON_DIR="${1}"
+CUSTOM_PORT="${2}"
+
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+CYAN='\033[0;36m'
+YELLOW='\033[1;33m'
+NC='\033[0m'
+
+log_info()  { echo -e "${CYAN}[dagzo-run]${NC} $1"; }
+log_ok()    { echo -e "${GREEN}[dagzo-run]${NC} $1"; }
+log_warn()  { echo -e "${YELLOW}[dagzo-run]${NC} $1"; }
+log_error() { echo -e "${RED}[dagzo-run]${NC} $1"; exit 1; }
+
+# Argument tekshirish
+[[ -z "$LESSON_DIR" ]] && log_error "Foydalanish: dagzo-run-lesson <lesson-path> [port]"
+[[ ! -d "$LESSON_DIR" ]] && log_error "Papka topilmadi: $LESSON_DIR"
+
+# run.py tekshirish
+RUN_PY="$LESSON_DIR/run.py"
+[[ ! -f "$RUN_PY" ]] && log_error "run.py topilmadi: $RUN_PY"
+
+# config.json o'qish
+CONFIG_JSON="$LESSON_DIR/config.json"
+LESSON_NAME="$(basename "$LESSON_DIR")"
+PORT=""
+URL=""
+
+if [[ -f "$CONFIG_JSON" ]]; then
+    if command -v python3 &>/dev/null; then
+        LESSON_NAME=$(python3 -c "import json,sys; d=json.load(open('$CONFIG_JSON')); print(d.get('name',''))" 2>/dev/null || echo "$LESSON_NAME")
+        PORT=$(python3 -c "import json,sys; d=json.load(open('$CONFIG_JSON')); print(d.get('port',''))" 2>/dev/null || echo "")
+        URL=$(python3 -c "import json,sys; d=json.load(open('$CONFIG_JSON')); print(d.get('url',''))" 2>/dev/null || echo "")
+    fi
+fi
+
+# Port aniqlash
+if [[ -n "$CUSTOM_PORT" ]]; then
+    PORT="$CUSTOM_PORT"
+elif [[ -z "$PORT" ]]; then
+    PORT="8000"
+fi
+
+log_info "Darslik: $LESSON_NAME"
+log_info "Papka:   $LESSON_DIR"
+log_info "Port:    $PORT"
+
+# python3 tekshirish
+command -v python3 &>/dev/null || log_error "python3 topilmadi. O'rnatish: sudo apt-get install python3"
+
+# run.py ishga tushirish (background)
+cd "$LESSON_DIR"
+log_info "python3 run.py ishga tushirilmoqda..."
+python3 run.py &
+PY_PID=$!
+
+# Server tayyor bo'lishini kutish (max 30 soniya)
+WAIT=0
+while [[ $WAIT -lt 30 ]]; do
+    if curl -s -o /dev/null "http://127.0.0.1:${PORT}" 2>/dev/null; then
+        break
+    fi
+    sleep 1
+    ((WAIT++))
+done
+
+if [[ $WAIT -ge 30 ]]; then
+    log_warn "Server $PORT portda javob bermadi — to'g'ridan-to'g'ri http://127.0.0.1:${PORT} ni tekshiring"
+fi
+
+OPEN_URL="${URL:-http://127.0.0.1:${PORT}}"
+log_ok "Darslik tayyor: $OPEN_URL"
+
+# Browser yoki Electron webview ochish
+if command -v xdg-open &>/dev/null; then
+    xdg-open "$OPEN_URL" 2>/dev/null &
+    log_ok "Browser ochildi: $OPEN_URL"
+else
+    log_warn "xdg-open topilmadi. Brauzerda oching: $OPEN_URL"
+fi
+
+# python3 jarayon tugaguncha kut (Ctrl+C bilan to'xtatiladi)
+log_info "Darslik ishlayapti (to'xtatish uchun Ctrl+C)..."
+wait $PY_PID 2>/dev/null || true
+log_info "Darslik to'xtatildi."

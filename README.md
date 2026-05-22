@@ -1,8 +1,12 @@
 # Dagzo OS
 
-Dagzo OS — Debian asosida remaster qilingan maxsus ta'lim operatsion tizimi.
+Dagzo OS — **Kali Linux rolling** asosida qurilgan maxsus ta'lim operatsion tizimi.
 
-> **Muhim:** Bu loyiha Linux/Debian kernelini noldan yaratmaydi. Debian minimal bazasini live-build orqali remaster qiladi va Dagzo brending, boot splash, Dagzo Learn o'quv dasturi va darslik tizimini qo'shadi.
+> **Muhim:** Dagzo OS Kali Linux rolling release asosida live-build orqali remaster qilingan. Kali repository va pentesting toollari o'rnatilgan, lekin Dagzo brending, Dagzo Learn o'quv dasturi va darslik tizimi Kali nomsiz — faqat Dagzo nomi va iconlari ko'rinadi.
+
+> **Kali toollari faqat qonuniy va etik maqsadlarda ishlatilsin.** Asosiy kompyuterga o'rnatishdan oldin VirtualBox/QEMU'da sinab ko'ring.
+
+> **Dagzo user:** login `dagzo`, parol `dagzo`. Sudo passwordless. Keyinchalik `passwd dagzo` bilan o'zgartiring.
 
 ---
 
@@ -448,6 +452,105 @@ sudo systemctl enable dagzo-learn-autostart.service
 # Foydalanuvchi autostart
 mkdir -p ~/.config/autostart
 cp /etc/xdg/autostart/dagzo-learn.desktop ~/.config/autostart/
+```
+
+---
+
+## Kali tools va repository
+
+Dagzo OS Kali rolling repository dan foydalanadi:
+```
+http://http.kali.org/kali kali-rolling main contrib non-free non-free-firmware
+```
+
+O'rnatilgan asosiy toollar: `nmap`, `net-tools`, `tcpdump`, `curl`, `wget`, `git`, `vim`, `netcat-traditional`, `whois`, va `kali-linux-core` metapackage.
+
+Qo'shimcha Kali toollarini o'rnatish:
+```bash
+sudo apt-get update
+sudo apt-get install kali-tools-top10   # Top 10 pentesting toollari
+sudo apt-get install kali-linux-full    # To'liq Kali (ogohlantirish: >10GB)
+```
+
+---
+
+## Darslik qo'shish — run.py orqali
+
+### Python asosidagi darslik strukturasi
+
+```
+mening-darsligim/
+├── run.py          # Majburiy — web server yoki app
+├── config.json     # Ixtiyoriy
+├── assets/
+├── books/
+└── tests/
+```
+
+`config.json` (ixtiyoriy):
+```json
+{
+  "name": "Matematika 5",
+  "publisher": "Dagzo",
+  "version": "1.0.0",
+  "type": "python",
+  "entry": "run.py",
+  "port": 8000,
+  "fullscreen": false
+}
+```
+
+### GUI orqali o'rnatish (Dagzo Learn ichidan)
+
+Dagzo Learn > Darsliklar > "Darslik qo'shish" tugmasini bosing, papkani tanlang.
+
+### Terminal orqali o'rnatish
+
+```bash
+# Papkani nusxalash
+sudo cp -r /siz/darsligingiz/ /opt/dagzo/apps/
+
+# yoki dagzo-run-lesson bilan to'g'ridan-to'g'ri ishga tushirish
+dagzo-run-lesson /opt/dagzo/apps/mening-darsligim
+dagzo-run-lesson /opt/dagzo/apps/mening-darsligim 5000  # port belgilash
+```
+
+### /opt/dagzo/apps strukturasi
+
+```
+/opt/dagzo/apps/          # dagzo user yoza oladi (chown dagzo:dagzo)
+├── matematika-5/
+│   ├── run.py
+│   └── config.json
+└── python-darslari/
+    ├── run.py
+    └── config.json
+```
+
+---
+
+## Dagzo user
+
+| Parametr | Qiymat |
+|----------|--------|
+| Login | `dagzo` |
+| Parol | `dagzo` |
+| Sudo | `NOPASSWD:ALL` |
+| Shell | `/bin/bash` |
+| /opt/dagzo/apps | Yozish mumkin |
+
+Parolni o'zgartirish:
+```bash
+passwd dagzo
+# sudo: dagzo ALL=(ALL) ALL   ← /etc/sudoers dan NOPASSWD ni olib tashlang
+```
+
+---
+
+## Tizim tekshiruvi
+
+```bash
+bash scripts/check-dagzo-system.sh
 ```
 
 ---

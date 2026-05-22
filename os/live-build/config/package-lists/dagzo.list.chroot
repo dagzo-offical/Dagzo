@@ -1,4 +1,4 @@
-# Dagzo OS — asosiy paketlar
+# Dagzo OS — Kali rolling asosidagi paketlar
 
 # XFCE Desktop
 xfce4
@@ -7,6 +7,7 @@ xfce4-panel
 xfce4-settings
 xfce4-session
 xfce4-notifyd
+xfce4-screenshooter
 xfwm4
 xfdesktop4
 thunar
@@ -18,15 +19,53 @@ lightdm-gtk-greeter
 plymouth
 plymouth-themes
 
-# Asosiy utilitalar
-network-manager
-network-manager-gnome
+# Asosiy Linux utilitalari
 bash
+coreutils
+util-linux
+procps
+grep
+sed
+gawk
+findutils
+less
+nano
+vim
 curl
 wget
 git
+unzip
+zip
+tar
+rsync
 sudo
+ca-certificates
+gnupg
+lsb-release
 software-properties-common
+
+# Network va pentesting
+net-tools
+iproute2
+iputils-ping
+dnsutils
+traceroute
+nmap
+whois
+netcat-traditional
+tcpdump
+
+# Kali metapackage (asosiy toollar)
+kali-linux-core
+# kali-tools-top10  # Opsional: hajm +2GB, izohlashni olib tashlang agar kerak bo'lsa
+
+# Browser
+firefox-esr
+
+# Python darsliklar uchun
+python3
+python3-pip
+python3-venv
 
 # Audio/video
 pulseaudio
@@ -34,7 +73,7 @@ gstreamer1.0-plugins-base
 gstreamer1.0-plugins-good
 gstreamer1.0-tools
 
-# Fayl uchun
+# Fayl va media
 file-roller
 evince
 vlc
@@ -43,7 +82,7 @@ vlc
 wine
 wine64
 
-# AppImage fallback uchun (linux-unpacked topilmasa)
+# AppImage fallback uchun
 libfuse2
 
 # Desktop integration va Electron uchun
@@ -67,14 +106,14 @@ libxrandr2
 libxkbcommon0
 libcups2
 
-# Node.js (Dagzo Learn uchun)
-nodejs
-npm
-
 # VM display drayverlar (VirtualBox, VMware)
 xserver-xorg-video-vmware
 open-vm-tools-desktop
 virtualbox-guest-x11
+
+# Node.js (Dagzo Learn uchun)
+nodejs
+npm
 
 # Boshqa
 fonts-dejavu

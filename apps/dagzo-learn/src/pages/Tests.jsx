@@ -1,28 +1,38 @@
 import { useState } from 'react'
 import { FileQuestion, CheckCircle, XCircle, Award } from 'lucide-react'
 
-const DEMO_QUIZ = {
-  title: 'Matematika asoslari',
-  questions: [
-    { id: 1, question: '5 × 8 = ?', options: ['35', '40', '45', '48'], answer: 1 },
-    { id: 2, question: '√144 = ?', options: ['11', '12', '13', '14'], answer: 1 },
-    { id: 3, question: '2³ = ?', options: ['6', '8', '9', '12'], answer: 1 },
-    { id: 4, question: '100 ÷ 4 = ?', options: ['20', '25', '30', '40'], answer: 1 },
-  ],
-}
-
 export default function Tests() {
+  const [quiz, setQuiz] = useState(null)
   const [started, setStarted] = useState(false)
   const [answers, setAnswers] = useState({})
   const [finished, setFinished] = useState(false)
 
-  const score = DEMO_QUIZ.questions.filter(
+  const score = quiz ? quiz.questions.filter(
     (q) => answers[q.id] === q.answer
-  ).length
+  ).length : 0
 
   const handleAnswer = (questionId, optionIdx) => {
     if (finished) return
     setAnswers(prev => ({ ...prev, [questionId]: optionIdx }))
+  }
+
+  if (quiz === null) {
+    return (
+      <div className="fade-in">
+        <h1 className="page-title" style={{ marginBottom: 8 }}>Testlar</h1>
+        <p style={{ color: 'var(--text-secondary)', marginBottom: 32 }}>
+          Bilimingizni sinang
+        </p>
+        <div style={{
+          textAlign: 'center', padding: '60px 20px',
+          color: 'var(--text-muted)',
+        }}>
+          <FileQuestion size={48} style={{ opacity: 0.3, marginBottom: 16 }} />
+          <p style={{ fontSize: 16, marginBottom: 8 }}>Hali test qo'shilmagan</p>
+          <p style={{ fontSize: 13 }}>Testlarni darslik papkasidagi tests/ ga qo'ying</p>
+        </div>
+      </div>
+    )
   }
 
   if (!started) {
@@ -34,9 +44,9 @@ export default function Tests() {
         </p>
         <div className="card" style={{ textAlign: 'center', padding: 48 }}>
           <div style={{ fontSize: 48, marginBottom: 16 }}>📝</div>
-          <h2 style={{ fontSize: 22, fontWeight: 700, marginBottom: 8 }}>{DEMO_QUIZ.title}</h2>
+          <h2 style={{ fontSize: 22, fontWeight: 700, marginBottom: 8 }}>{quiz.title}</h2>
           <p style={{ color: 'var(--text-muted)', marginBottom: 28 }}>
-            {DEMO_QUIZ.questions.length} ta savol
+            {quiz.questions.length} ta savol
           </p>
           <button className="btn btn-primary" style={{ padding: '12px 32px' }} onClick={() => setStarted(true)}>
             Testni boshlash →
@@ -47,7 +57,7 @@ export default function Tests() {
   }
 
   if (finished) {
-    const pct = Math.round((score / DEMO_QUIZ.questions.length) * 100)
+    const pct = Math.round((score / quiz.questions.length) * 100)
     return (
       <div className="fade-in" style={{ maxWidth: 500, margin: '0 auto', textAlign: 'center', paddingTop: 40 }}>
         <Award size={64} color={pct >= 70 ? 'var(--accent-green)' : 'var(--accent-cyan)'} style={{ marginBottom: 20 }} />
@@ -55,7 +65,7 @@ export default function Tests() {
           {pct >= 90 ? "A'lo!" : pct >= 70 ? 'Yaxshi!' : "Ko'proq o'qing"}
         </h1>
         <p style={{ color: 'var(--text-secondary)', fontSize: 18, marginBottom: 32 }}>
-          {score} / {DEMO_QUIZ.questions.length} to'g'ri javob ({pct}%)
+          {score} / {quiz.questions.length} to'g'ri javob ({pct}%)
         </p>
         <button className="btn btn-primary" onClick={() => { setStarted(false); setAnswers({}); setFinished(false) }}>
           Qayta boshlash
@@ -67,13 +77,13 @@ export default function Tests() {
   return (
     <div className="fade-in" style={{ maxWidth: 700 }}>
       <div className="page-header">
-        <h1 className="page-title">{DEMO_QUIZ.title}</h1>
+        <h1 className="page-title">{quiz.title}</h1>
         <span style={{ color: 'var(--text-secondary)' }}>
-          {Object.keys(answers).length} / {DEMO_QUIZ.questions.length}
+          {Object.keys(answers).length} / {quiz.questions.length}
         </span>
       </div>
 
-      {DEMO_QUIZ.questions.map((q, qi) => (
+      {quiz.questions.map((q, qi) => (
         <div key={q.id} style={{
           marginBottom: 20, padding: 24,
           background: 'var(--bg-card)', border: '1px solid var(--border)',
@@ -110,7 +120,7 @@ export default function Tests() {
         </div>
       ))}
 
-      {Object.keys(answers).length === DEMO_QUIZ.questions.length && (
+      {Object.keys(answers).length === quiz.questions.length && (
         <button
           className="btn btn-primary"
           style={{ width: '100%', padding: '14px', fontSize: 16, marginTop: 8 }}

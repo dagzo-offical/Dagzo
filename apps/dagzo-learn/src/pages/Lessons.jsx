@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { BookOpen, Search, ExternalLink, RefreshCw } from 'lucide-react'
+import { BookOpen, Search, ExternalLink, RefreshCw, Upload } from 'lucide-react'
 
 export default function Lessons() {
   const [lessons, setLessons] = useState([])
@@ -14,12 +14,7 @@ export default function Lessons() {
         const data = await window.dagzo.getLessons()
         setLessons(data)
       } else {
-        // Demo data
-        setLessons([
-          { id: 'matematika-5', name: 'Matematika 5', publisher: 'Dagzo', version: '1.0.0' },
-          { id: 'python-darslari', name: 'Python Darslari', publisher: 'Dagzo', version: '1.0.0' },
-          { id: 'english-basic', name: 'English Basic', publisher: 'Dagzo', version: '1.0.0' },
-        ])
+        setLessons([])
       }
     } catch {
       setLessons([])
@@ -58,10 +53,22 @@ export default function Lessons() {
           <h1 className="page-title">Darsliklar</h1>
           <p className="page-subtitle">{lessons.length} ta darslik o'rnatilgan</p>
         </div>
-        <button className="btn btn-secondary" onClick={loadLessons}>
-          <RefreshCw size={16} />
-          Yangilash
-        </button>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button className="btn btn-secondary" onClick={() => {
+            if (window.dagzo) {
+              window.dagzo.installLesson()
+            } else {
+              alert('Faqat Dagzo OS ichida ishlaydi')
+            }
+          }}>
+            <Upload size={16} />
+            Darslik qo'shish
+          </button>
+          <button className="btn btn-secondary" onClick={loadLessons}>
+            <RefreshCw size={16} />
+            Yangilash
+          </button>
+        </div>
       </div>
 
       {/* Search */}
@@ -90,7 +97,7 @@ export default function Lessons() {
         }}>
           <BookOpen size={48} style={{ opacity: 0.3, marginBottom: 16 }} />
           <p style={{ fontSize: 16, marginBottom: 8 }}>
-            {search ? 'Darslik topilmadi' : 'Hech qanday darslik o\'rnatilmagan'}
+            {search ? 'Darslik topilmadi' : 'Hali darslik o\'rnatilmagan'}
           </p>
           <p style={{ fontSize: 13 }}>
             {!search && 'Darsliklarni /opt/dagzo/apps/ papkasiga qo\'ying'}

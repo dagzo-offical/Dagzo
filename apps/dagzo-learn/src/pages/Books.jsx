@@ -1,13 +1,8 @@
 import { useState } from 'react'
 import { BookMarked, Upload, X } from 'lucide-react'
 
-const DEMO_BOOKS = [
-  { id: 1, title: 'Matematika 5-sinf', author: 'Dagzo', pages: 320, size: '4.2 MB' },
-  { id: 2, title: "O'zbek tili grammatikasi", author: 'Dagzo', pages: 280, size: '3.1 MB' },
-  { id: 3, title: 'Informatika asoslari', author: 'Dagzo', pages: 240, size: '5.8 MB' },
-]
-
 export default function Books() {
+  const [books, setBooks] = useState([])
   const [selectedBook, setSelectedBook] = useState(null)
 
   return (
@@ -17,7 +12,7 @@ export default function Books() {
           <h1 className="page-title">Kitoblar</h1>
           <p className="page-subtitle">PDF kitoblarni o'qing</p>
         </div>
-        <button className="btn btn-secondary">
+        <button className="btn btn-secondary" onClick={() => alert('Tez orada...')}>
           <Upload size={16} />
           Kitob qo'shish
         </button>
@@ -47,9 +42,18 @@ export default function Books() {
             <p style={{ fontSize: 12 }}>lesson-template/app/books/ papkasiga PDF qo'ying</p>
           </div>
         </div>
+      ) : books.length === 0 ? (
+        <div style={{
+          textAlign: 'center', padding: '60px 20px',
+          color: 'var(--text-muted)',
+        }}>
+          <BookMarked size={48} style={{ opacity: 0.3, marginBottom: 16 }} />
+          <p style={{ fontSize: 16, marginBottom: 8 }}>Hali kitob qo'shilmagan</p>
+          <p style={{ fontSize: 13 }}>Kitoblarni darslik papkasidagi books/ ga qo'ying</p>
+        </div>
       ) : (
         <div className="grid-cards">
-          {DEMO_BOOKS.map((book) => (
+          {books.map((book) => (
             <div key={book.id} className="card" onClick={() => setSelectedBook(book)}>
               <div style={{
                 width: 52, height: 52,

@@ -1,14 +1,8 @@
 import { useState } from 'react'
 import { Play, Clock } from 'lucide-react'
 
-const DEMO_VIDEOS = [
-  { id: 1, title: 'Algebra kirish darsi', duration: '12:34', subject: 'Matematika' },
-  { id: 2, title: 'Python o\'zgaruvchilar', duration: '08:22', subject: 'Dasturlash' },
-  { id: 3, title: "Ingliz tili so'zlashuv", duration: '15:10', subject: 'Ingliz tili' },
-  { id: 4, title: 'Fizika — harakat qonunlari', duration: '18:45', subject: 'Fizika' },
-]
-
 export default function Videos() {
+  const [videos, setVideos] = useState([])
   const [playing, setPlaying] = useState(null)
 
   return (
@@ -38,9 +32,18 @@ export default function Videos() {
             <p style={{ fontSize: 12 }}>Video player — .mp4/.webm fayllarni ijro etadi</p>
           </div>
         </div>
+      ) : videos.length === 0 ? (
+        <div style={{
+          textAlign: 'center', padding: '60px 20px',
+          color: 'var(--text-muted)',
+        }}>
+          <Play size={48} style={{ opacity: 0.3, marginBottom: 16 }} />
+          <p style={{ fontSize: 16, marginBottom: 8 }}>Hali video qo'shilmagan</p>
+          <p style={{ fontSize: 13 }}>Videodarsliklari darslik papkasidagi videos/ ga qo'ying</p>
+        </div>
       ) : (
         <div className="grid-cards">
-          {DEMO_VIDEOS.map((video) => (
+          {videos.map((video) => (
             <div key={video.id} className="card" onClick={() => setPlaying(video)}>
               <div style={{
                 height: 140,

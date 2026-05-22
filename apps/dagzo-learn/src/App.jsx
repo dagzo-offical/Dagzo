@@ -1,4 +1,4 @@
-import { Routes, Route, Navigate } from 'react-router-dom'
+import { Routes, Route, Navigate, useNavigate } from 'react-router-dom'
 import { useState, useEffect } from 'react'
 import Sidebar from './components/Sidebar'
 import TopBar from './components/TopBar'
@@ -9,10 +9,9 @@ import Videos from './pages/Videos'
 import Tests from './pages/Tests'
 import WiFi from './pages/WiFi'
 import Settings from './pages/Settings'
-import AdminExitModal from './components/AdminExitModal'
 
 export default function App() {
-  const [showAdminModal, setShowAdminModal] = useState(false)
+  const navigate = useNavigate()
   const [isFullscreen, setIsFullscreen] = useState(true)
 
   useEffect(() => {
@@ -26,18 +25,19 @@ export default function App() {
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [])
 
-  const handleExit = () => {
+  const handleExit = () => navigate('/')
+
+  const handleAdminExit = async () => {
     if (window.dagzo) {
-      window.dagzo.quitApp()
-    } else {
-      window.close()
+      await window.dagzo.adminExit()
+      await window.dagzo.toggleFullscreen()
     }
   }
 
   return (
     <div className="app-container">
       <Sidebar
-        onAdminExit={() => setShowAdminModal(true)}
+        onAdminExit={handleAdminExit}
         onExit={handleExit}
       />
       <div className="main-content">
@@ -63,10 +63,6 @@ export default function App() {
           </Routes>
         </div>
       </div>
-
-      {showAdminModal && (
-        <AdminExitModal onClose={() => setShowAdminModal(false)} />
-      )}
     </div>
   )
 }

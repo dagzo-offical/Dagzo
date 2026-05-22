@@ -133,7 +133,7 @@ export default function Home() {
       </div>
 
       {/* Recent lessons */}
-      {lessons.length > 0 && (
+      {lessons.length > 0 ? (
         <div>
           <div className="page-header" style={{ marginBottom: 16 }}>
             <h2 style={{ fontSize: 18, fontWeight: 600, color: 'var(--text-secondary)' }}>
@@ -148,6 +148,12 @@ export default function Home() {
               <LessonCard key={lesson.id} lesson={lesson} />
             ))}
           </div>
+        </div>
+      ) : (
+        <div style={{ marginTop: 28, padding: '24px', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 'var(--radius-md)', textAlign: 'center', color: 'var(--text-muted)' }}>
+          <BookOpen size={32} style={{ opacity: 0.3, marginBottom: 12 }} />
+          <p style={{ fontSize: 14 }}>Hali darslik o'rnatilmagan</p>
+          <p style={{ fontSize: 12, marginTop: 6 }}>Darsliklarni /opt/dagzo/apps/ papkasiga qo'ying</p>
         </div>
       )}
 
