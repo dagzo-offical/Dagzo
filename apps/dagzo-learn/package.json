@@ -46,6 +46,7 @@
     "linux": {
       "target": ["AppImage", "deb"],
       "icon": "public/icon.png",
+      "executableName": "dagzo-learn",
       "category": "Education",
       "desktop": {
         "Name": "Dagzo Learn",

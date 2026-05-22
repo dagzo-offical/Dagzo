@@ -85,43 +85,42 @@ setup_dirs() {
     log_success "Papkalar tayyor"
 }
 
-# Electron binary / AppImage o'rnatish
+# Fix #5: Electron binary / AppImage o'rnatish — real build output nomiga mos
 install_binary() {
-    # 1. AppImage
+    # 1. AppImage — electron-builder har xil nom berishi mumkin
+    #    package.json "executableName": "dagzo-learn" bilan AppImage nomi:
+    #    "Dagzo Learn-1.0.0.AppImage" yoki "dagzo-learn-1.0.0.AppImage"
     local appimage
     appimage=$(ls "$APP_DIR/dist-electron/"*.AppImage 2>/dev/null | head -1)
     if [[ -n "$appimage" ]]; then
         cp "$appimage" "$INSTALL_DIR/dagzo-learn.AppImage"
         chmod +x "$INSTALL_DIR/dagzo-learn.AppImage"
-        ln -sf "$INSTALL_DIR/dagzo-learn.AppImage" "$INSTALL_DIR/dagzo-learn"
-        log_success "Dagzo Learn AppImage o'rnatildi: $INSTALL_DIR"
+        # Relative symlink: dagzo-learn → dagzo-learn.AppImage
+        ln -sf dagzo-learn.AppImage "$INSTALL_DIR/dagzo-learn"
+        log_success "AppImage o'rnatildi: $(basename "$appimage") → dagzo-learn"
         return 0
     fi
 
-    # 2. linux-unpacked binary
+    # 2. linux-unpacked — "executableName": "dagzo-learn" bilan binary nomi aniq
     if [[ -f "$APP_DIR/dist-electron/linux-unpacked/dagzo-learn" ]]; then
-        cp -r "$APP_DIR/dist-electron/linux-unpacked/"* "$INSTALL_DIR/"
+        cp -r "$APP_DIR/dist-electron/linux-unpacked/." "$INSTALL_DIR/"
         chmod +x "$INSTALL_DIR/dagzo-learn"
-        log_success "Dagzo Learn binary o'rnatildi: $INSTALL_DIR"
+        log_success "linux-unpacked binary o'rnatildi: $INSTALL_DIR/dagzo-learn"
         return 0
     fi
 
-    # 3. Dev mode fallback — electron ni to'g'ridan-to'g'ri chaqirish
-    log_warn "Electron binary topilmadi — dev launcher yaratilmoqda"
+    # 3. Dev mode fallback — source'dan to'g'ridan-to'g'ri electron chaqiradi
+    log_warn "Electron build topilmadi — dev launcher yaratilmoqda (source: $APP_DIR)"
 
-    # React dist ni /opt/ ga ko'chirish
-    if [[ -d "$APP_DIR/dist" ]]; then
-        cp -r "$APP_DIR/dist" "$INSTALL_DIR/dist"
-    fi
-    cp -r "$APP_DIR/electron" "$INSTALL_DIR/electron"
-    cp -r "$APP_DIR/backend"  "$INSTALL_DIR/backend"
+    [[ -d "$APP_DIR/dist" ]] && cp -r "$APP_DIR/dist"         "$INSTALL_DIR/dist"
+    cp -r "$APP_DIR/electron"     "$INSTALL_DIR/electron"
+    cp -r "$APP_DIR/backend"      "$INSTALL_DIR/backend"
     cp -r "$APP_DIR/node_modules" "$INSTALL_DIR/node_modules"
-    cp "$APP_DIR/package.json" "$INSTALL_DIR/"
+    cp    "$APP_DIR/package.json" "$INSTALL_DIR/"
 
-    # Launcher script
     cat > "$INSTALL_DIR/dagzo-learn" << LAUNCHER
 #!/bin/bash
-cd "$INSTALL_DIR"
+cd "${INSTALL_DIR}"
 exec node_modules/.bin/electron . --no-sandbox "\$@"
 LAUNCHER
     chmod +x "$INSTALL_DIR/dagzo-learn"
@@ -154,8 +153,9 @@ install_desktop_integration() {
     cp "$PROJECT_ROOT/os/systemd/dagzo-learn-autostart.service" \
        /etc/systemd/user/dagzo-learn-autostart.service
 
-    # Icon kesh yangilash
+    # Icon va desktop caches yangilash — Fix #7
     update-desktop-database /usr/share/applications 2>/dev/null || true
+    gtk-update-icon-cache -f /usr/share/icons/hicolor 2>/dev/null || true
 
     log_success "Desktop integratsiyasi o'rnatildi"
 }

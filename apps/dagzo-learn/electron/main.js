@@ -1,196 +1,68 @@
-const { app, BrowserWindow, ipcMain, shell, dialog } = require('electron')
+const { app, BrowserWindow, ipcMain, shell } = require('electron')
 const path = require('path')
-const { exec, execSync } = require('child_process')
+const { exec, fork } = require('child_process')
 const fs = require('fs')
 
 const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged
 
-// Branding papkasi: dev — loyiha ichida, production — /opt/dagzo/branding/
+// Fix #2: __dirname = .../apps/dagzo-learn/electron/ → ../../../ = project root
+const PROJECT_ROOT = isDev
+  ? path.join(__dirname, '../../..')
+  : null
+
 const BRANDING_DIR = isDev
-  ? path.join(__dirname, '../../assets/branding')
+  ? path.join(PROJECT_ROOT, 'assets/branding')
   : '/opt/dagzo/branding'
+
+const APPS_DIR = isDev
+  ? path.join(PROJECT_ROOT, 'lesson-template/sample-apps')
+  : '/opt/dagzo/apps'
 
 const ADMIN_PASSWORD = process.env.DAGZO_ADMIN_PASSWORD || 'dagzo2024'
 
 let mainWindow = null
 let lessonWindow = null
+let backendProcess = null  // Fix #3
 
-function createMainWindow() {
-  mainWindow = new BrowserWindow({
-    width: 1920,
-    height: 1080,
-    fullscreen: true,
-    kiosk: false,
-    frame: false,
-    titleBarStyle: 'hidden',
-    backgroundColor: '#0a0a0f',
-    icon: path.join(BRANDING_DIR, 'icon.png'),
-    webPreferences: {
-      preload: path.join(__dirname, 'preload.js'),
-      contextIsolation: true,
-      nodeIntegration: false,
-      webviewTag: true,
-      webSecurity: false, // local fayllar uchun
-    },
-  })
+// ── Fix #3: Wi-Fi backend auto-start ────────────────────────────────────────
+function startBackend() {
+  const backendPath = isDev
+    ? path.join(__dirname, '../backend/server.js')
+    : path.join(path.dirname(app.getPath('exe')), 'resources/app/backend/server.js')
 
-  if (isDev) {
-    mainWindow.loadURL('http://localhost:5173')
-    mainWindow.webContents.openDevTools({ mode: 'detach' })
-  } else {
-    mainWindow.loadFile(path.join(__dirname, '../dist/index.html'))
+  if (!fs.existsSync(backendPath)) {
+    console.warn('[backend] server.js topilmadi:', backendPath)
+    return
   }
 
-  mainWindow.on('closed', () => {
-    mainWindow = null
+  backendProcess = fork(backendPath, [], {
+    env: { ...process.env, PORT: '3001' },
+    silent: true,
   })
 
-  // F11 — fullscreen toggle
-  mainWindow.webContents.on('before-input-event', (event, input) => {
-    if (input.key === 'F11') {
-      mainWindow.setFullScreen(!mainWindow.isFullScreen())
-    }
+  backendProcess.stdout?.on('data', (d) => console.log('[backend]', d.toString().trim()))
+  backendProcess.stderr?.on('data', (d) => console.error('[backend]', d.toString().trim()))
+  backendProcess.on('exit', (code) => {
+    console.log(`[backend] jarayon tugadi (kod: ${code})`)
+    backendProcess = null
   })
+
+  console.log('[backend] Wi-Fi API ishga tushdi (pid:', backendProcess.pid, ')')
 }
 
-// Darslik oynasini ochish
-function openLessonWindow(lessonPath, config) {
-  if (lessonWindow) {
-    lessonWindow.close()
+function stopBackend() {
+  if (backendProcess) {
+    backendProcess.kill('SIGTERM')
+    backendProcess = null
+    console.log('[backend] Wi-Fi API to\'xtatildi')
   }
-
-  lessonWindow = new BrowserWindow({
-    width: 1920,
-    height: 1080,
-    fullscreen: config.fullscreen !== false,
-    kiosk: config.kiosk === true,
-    frame: false,
-    backgroundColor: '#0a0a0f',
-    parent: mainWindow,
-    webPreferences: {
-      preload: path.join(__dirname, 'preload.js'),
-      contextIsolation: true,
-      nodeIntegration: false,
-      webviewTag: true,
-      webSecurity: false,
-      allowRunningInsecureContent: true,
-    },
-  })
-
-  const indexPath = path.join(lessonPath, config.start || 'index.html')
-  lessonWindow.loadFile(indexPath)
-
-  lessonWindow.on('closed', () => {
-    lessonWindow = null
-  })
-
-  return true
 }
 
-// Darsliklarni /opt/dagzo/apps/ dan o'qish
-function getLessons() {
-  const appsDir = isDev
-    ? path.join(__dirname, '../../lesson-template/sample-apps')
-    : '/opt/dagzo/apps'
-
-  const lessons = []
-
-  if (!fs.existsSync(appsDir)) {
-    return lessons
-  }
-
-  const entries = fs.readdirSync(appsDir, { withFileTypes: true })
-
-  for (const entry of entries) {
-    if (!entry.isDirectory()) continue
-
-    const lessonPath = path.join(appsDir, entry.name)
-    const configPath = path.join(lessonPath, 'config.json')
-
-    if (!fs.existsSync(configPath)) continue
-
-    try {
-      const config = JSON.parse(fs.readFileSync(configPath, 'utf8'))
-      lessons.push({
-        id: entry.name,
-        path: lessonPath,
-        ...config,
-      })
-    } catch (e) {
-      console.error(`config.json o'qishda xato: ${lessonPath}`, e)
-    }
-  }
-
-  return lessons
-}
-
-// IPC handlers
-ipcMain.handle('get-lessons', async () => {
-  return getLessons()
-})
-
-ipcMain.handle('open-lesson', async (event, lessonId) => {
-  const appsDir = isDev
-    ? path.join(__dirname, '../../lesson-template/sample-apps')
-    : '/opt/dagzo/apps'
-
-  const lessonPath = path.join(appsDir, lessonId)
-  const configPath = path.join(lessonPath, 'config.json')
-
-  if (!fs.existsSync(configPath)) {
-    return { success: false, error: 'Darslik topilmadi' }
-  }
-
-  try {
-    const config = JSON.parse(fs.readFileSync(configPath, 'utf8'))
-    openLessonWindow(lessonPath, config)
-    return { success: true }
-  } catch (e) {
-    return { success: false, error: e.message }
-  }
-})
-
-ipcMain.handle('close-lesson', async () => {
-  if (lessonWindow) {
-    lessonWindow.close()
-    return { success: true }
-  }
-  return { success: false }
-})
-
-ipcMain.handle('verify-admin-password', async (event, password) => {
-  return { valid: password === ADMIN_PASSWORD }
-})
-
-ipcMain.handle('admin-exit', async (event, password) => {
-  if (password !== ADMIN_PASSWORD) {
-    return { success: false, error: "Noto'g'ri parol" }
-  }
-
-  // Kiosk/fullscreen rejimdan chiqish
-  if (mainWindow) {
-    mainWindow.setKiosk(false)
-    mainWindow.setFullScreen(false)
-  }
-  return { success: true }
-})
-
-ipcMain.handle('toggle-fullscreen', async () => {
-  if (mainWindow) {
-    mainWindow.setFullScreen(!mainWindow.isFullScreen())
-    return { fullscreen: mainWindow.isFullScreen() }
-  }
-  return { fullscreen: false }
-})
-
-ipcMain.handle('quit-app', async () => {
-  app.quit()
-})
-
-// .exe faylni Wine orqali ochish
-ipcMain.handle('open-exe', async (event, filePath) => {
+// ── Fix #4: Wine helper — open-exe va open-file uchun umumiy funksiya ───────
+async function openWithWine(filePath) {
   return new Promise((resolve) => {
-    exec(`wine "${filePath}"`, (error) => {
+    const safe = filePath.replace(/"/g, '\\"')
+    exec(`wine "${safe}"`, { timeout: 5000 }, (error) => {
       if (error) {
         resolve({
           success: false,
@@ -201,87 +73,191 @@ ipcMain.handle('open-exe', async (event, filePath) => {
       }
     })
   })
+}
+
+// ── Main window ─────────────────────────────────────────────────────────────
+function createMainWindow() {
+  const iconPath = path.join(BRANDING_DIR, 'icon.png')
+
+  mainWindow = new BrowserWindow({
+    width: 1920,
+    height: 1080,
+    fullscreen: true,
+    kiosk: false,
+    frame: false,
+    titleBarStyle: 'hidden',
+    backgroundColor: '#0a0a0f',
+    icon: fs.existsSync(iconPath) ? iconPath : undefined,
+    webPreferences: {
+      preload: path.join(__dirname, 'preload.js'),
+      contextIsolation: true,
+      nodeIntegration: false,
+      webviewTag: true,
+      webSecurity: false,
+    },
+  })
+
+  if (isDev) {
+    mainWindow.loadURL('http://localhost:5173')
+    mainWindow.webContents.openDevTools({ mode: 'detach' })
+  } else {
+    mainWindow.loadFile(path.join(__dirname, '../dist/index.html'))
+  }
+
+  mainWindow.on('closed', () => { mainWindow = null })
+
+  mainWindow.webContents.on('before-input-event', (event, input) => {
+    if (input.key === 'F11') {
+      mainWindow.setFullScreen(!mainWindow.isFullScreen())
+    }
+  })
+}
+
+// ── Lesson window ─────────────────────────────────────────────────────────
+function openLessonWindow(lessonPath, config) {
+  if (lessonWindow) lessonWindow.close()
+
+  lessonWindow = new BrowserWindow({
+    width: 1920,
+    height: 1080,
+    fullscreen: config.fullscreen !== false,
+    kiosk: config.kiosk === true,
+    frame: false,
+    backgroundColor: '#0a0a0f',
+    parent: mainWindow,
+    webPreferences: {
+      contextIsolation: true,
+      nodeIntegration: false,
+      webviewTag: true,
+      webSecurity: false,
+      allowRunningInsecureContent: true,
+    },
+  })
+
+  lessonWindow.loadFile(path.join(lessonPath, config.start || 'index.html'))
+  lessonWindow.on('closed', () => { lessonWindow = null })
+}
+
+// ── Darsliklarni o'qish ───────────────────────────────────────────────────
+function getLessons() {
+  if (!fs.existsSync(APPS_DIR)) return []
+
+  return fs.readdirSync(APPS_DIR, { withFileTypes: true })
+    .filter(e => e.isDirectory())
+    .reduce((acc, entry) => {
+      const configPath = path.join(APPS_DIR, entry.name, 'config.json')
+      if (!fs.existsSync(configPath)) return acc
+      try {
+        const config = JSON.parse(fs.readFileSync(configPath, 'utf8'))
+        acc.push({ id: entry.name, path: path.join(APPS_DIR, entry.name), ...config })
+      } catch (e) {
+        console.error('config.json xato:', configPath, e.message)
+      }
+      return acc
+    }, [])
+}
+
+// ── IPC handlers ─────────────────────────────────────────────────────────
+ipcMain.handle('get-lessons', async () => getLessons())
+
+ipcMain.handle('open-lesson', async (event, lessonId) => {
+  const lessonPath = path.join(APPS_DIR, lessonId)
+  const configPath = path.join(lessonPath, 'config.json')
+  if (!fs.existsSync(configPath)) return { success: false, error: 'Darslik topilmadi' }
+  try {
+    const config = JSON.parse(fs.readFileSync(configPath, 'utf8'))
+    openLessonWindow(lessonPath, config)
+    return { success: true }
+  } catch (e) {
+    return { success: false, error: e.message }
+  }
 })
+
+ipcMain.handle('close-lesson', async () => {
+  if (lessonWindow) { lessonWindow.close(); return { success: true } }
+  return { success: false }
+})
+
+ipcMain.handle('verify-admin-password', async (event, password) => ({
+  valid: password === ADMIN_PASSWORD,
+}))
+
+ipcMain.handle('admin-exit', async (event, password) => {
+  if (password !== ADMIN_PASSWORD) return { success: false, error: "Noto'g'ri parol" }
+  mainWindow?.setKiosk(false)
+  mainWindow?.setFullScreen(false)
+  return { success: true }
+})
+
+ipcMain.handle('toggle-fullscreen', async () => {
+  if (!mainWindow) return { fullscreen: false }
+  mainWindow.setFullScreen(!mainWindow.isFullScreen())
+  return { fullscreen: mainWindow.isFullScreen() }
+})
+
+ipcMain.handle('quit-app', async () => app.quit())
+
+// Fix #4: .exe — shared openWithWine funksiyasidan foydalanish
+ipcMain.handle('open-exe', async (event, filePath) => openWithWine(filePath))
 
 ipcMain.handle('open-file', async (event, filePath) => {
   const ext = path.extname(filePath).toLowerCase()
-
-  if (ext === '.exe') {
-    return ipcMain.emit('open-exe', null, filePath)
-  } else if (['.pdf', '.mp4', '.webm', '.avi', '.mkv'].includes(ext)) {
-    shell.openPath(filePath)
-    return { success: true }
-  } else {
-    shell.openPath(filePath)
-    return { success: true }
-  }
+  if (ext === '.exe') return openWithWine(filePath)   // Fix #4: ipcMain.emit yo'q
+  shell.openPath(filePath)
+  return { success: true }
 })
 
-// Branding papkasi yo'lini qaytarish
-ipcMain.handle('get-branding-dir', async () => {
-  return BRANDING_DIR
-})
+ipcMain.handle('get-branding-dir', async () => BRANDING_DIR)
 
-// XFCE wallpaper o'zgartirish (xfconf-query orqali)
 ipcMain.handle('set-wallpaper', async (event, wallpaperId) => {
   const wallpaperPath = path.join(BRANDING_DIR, 'wallpapers', `wallpaper-${wallpaperId}.png`)
-
   if (!fs.existsSync(wallpaperPath)) {
-    return { success: false, error: `Wallpaper topilmadi: ${wallpaperPath}` }
+    return { success: false, error: `Wallpaper topilmadi: wallpaper-${wallpaperId}.png` }
   }
 
   return new Promise((resolve) => {
-    // Barcha monitor va workspacelar uchun wallpaper o'rnatish
     const monitors = [0, 1, 2]
-    const promises = monitors.map(
-      (m) =>
-        new Promise((res) => {
-          exec(
-            `xfconf-query -c xfce4-desktop \
-              -p "/backdrop/screen0/monitor${m}/workspace0/last-image" \
-              -s "${wallpaperPath}" 2>/dev/null`,
-            () => res()
-          )
-        })
-    )
-
-    Promise.all(promises).then(() => {
-      // xfdesktop refresh
-      exec('xfdesktop --reload 2>/dev/null || true', () => {
-        resolve({ success: true, path: wallpaperPath })
-      })
+    let done = 0
+    monitors.forEach((m) => {
+      exec(
+        `xfconf-query -c xfce4-desktop \
+         -p "/backdrop/screen0/monitor${m}/workspace0/last-image" \
+         -s "${wallpaperPath.replace(/"/g, '\\"')}" 2>/dev/null`,
+        () => { if (++done === monitors.length) {
+          exec('xfdesktop --reload 2>/dev/null || true', () => {
+            resolve({ success: true, path: wallpaperPath })
+          })
+        }}
+      )
     })
   })
 })
 
-ipcMain.handle('get-system-info', async () => {
-  return {
-    appVersion: app.getVersion(),
-    electronVersion: process.versions.electron,
-    nodeVersion: process.versions.node,
-    platform: process.platform,
-    arch: process.arch,
-    osName: 'Dagzo OS',
-  }
-})
+ipcMain.handle('get-system-info', async () => ({
+  appVersion: app.getVersion(),
+  electronVersion: process.versions.electron,
+  nodeVersion: process.versions.node,
+  platform: process.platform,
+  arch: process.arch,
+  osName: 'Dagzo OS',
+}))
 
+// ── App lifecycle ─────────────────────────────────────────────────────────
 app.whenReady().then(() => {
+  startBackend()       // Fix #3: backend avtomatik ishga tushadi
   createMainWindow()
 
   app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) {
-      createMainWindow()
-    }
+    if (BrowserWindow.getAllWindows().length === 0) createMainWindow()
   })
 })
 
+app.on('before-quit', () => stopBackend())   // Fix #3: app yopilganda backend ham yopiladi
+
 app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') {
-    app.quit()
-  }
+  if (process.platform !== 'darwin') app.quit()
 })
 
-// Crash himoya
 process.on('uncaughtException', (error) => {
-  console.error('Electron xato:', error)
+  console.error('[main] uncaught exception:', error)
 })

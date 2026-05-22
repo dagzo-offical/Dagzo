@@ -35,10 +35,18 @@ install_branding_files() {
 
     mkdir -p "$BRANDING_DIR" "$WALLPAPER_DIR" "$APPS_DIR" "$PLYMOUTH_DIR"
 
-    # Icon
+    # Icon — Fix #7: /opt/dagzo/branding/ VA hicolor themes ga ham ko'chirish
     if [[ -f "$PROJECT_ROOT/assets/branding/icon.png" ]]; then
         cp "$PROJECT_ROOT/assets/branding/icon.png" "$BRANDING_DIR/icon.png"
-        log_success "icon.png o'rnatildi"
+
+        # Tizim icon keshi uchun hicolor sizes
+        for size in 16 24 32 48 64 128 256 512; do
+            mkdir -p "/usr/share/icons/hicolor/${size}x${size}/apps"
+        done
+        cp "$PROJECT_ROOT/assets/branding/icon.png" \
+           "/usr/share/icons/hicolor/256x256/apps/dagzo-learn.png"
+
+        log_success "icon.png o'rnatildi (branding + hicolor)"
     else
         log_warn "icon.png topilmadi: $PROJECT_ROOT/assets/branding/icon.png"
     fi
@@ -132,9 +140,10 @@ install_desktop_files() {
         chown dagzo:dagzo "$desktop_dir/Dagzo-Learn.desktop" 2>/dev/null || true
     fi
 
-    # Icon cache yangilash
+    # Desktop va icon caches yangilash — Fix #7
     update-desktop-database /usr/share/applications 2>/dev/null || true
-    gtk-update-icon-cache /usr/share/icons/hicolor 2>/dev/null || true
+    gtk-update-icon-cache -f /usr/share/icons/hicolor 2>/dev/null || true
+    xdg-icon-resource forceupdate 2>/dev/null || true
 
     log_success "Desktop fayllari o'rnatildi"
 }

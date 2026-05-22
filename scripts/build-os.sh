@@ -22,7 +22,6 @@ log_success() { echo -e "${GREEN}[OK]${NC} $1"; }
 log_warn()    { echo -e "${YELLOW}[WARN]${NC} $1"; }
 log_error()   { echo -e "${RED}[ERROR]${NC} $1"; exit 1; }
 
-# Root tekshirish
 if [[ $EUID -ne 0 ]]; then
     log_error "Bu script root huquqi bilan ishga tushirilishi kerak: sudo $0"
 fi
@@ -31,198 +30,311 @@ fi
 check_deps() {
     log_info "Kerakli paketlar tekshirilmoqda..."
     local missing=()
-    for pkg in live-build debootstrap squashfs-tools xorriso; do
-        if ! dpkg -l "$pkg" &>/dev/null; then
-            missing+=("$pkg")
-        fi
+    for pkg in live-build debootstrap squashfs-tools xorriso nodejs npm; do
+        dpkg -l "$pkg" &>/dev/null || missing+=("$pkg")
     done
 
     if [[ ${#missing[@]} -gt 0 ]]; then
-        log_warn "Quyidagi paketlar o'rnatilmagan: ${missing[*]}"
-        log_info "O'rnatilmoqda..."
+        log_warn "O'rnatilmagan paketlar: ${missing[*]}"
         apt-get update -qq
         apt-get install -y "${missing[@]}"
     fi
-    log_success "Barcha paketlar mavjud"
+
+    # Node.js versiyasini tekshirish
+    local node_ver
+    node_ver=$(node -v 2>/dev/null | cut -d'v' -f2 | cut -d'.' -f1)
+    if [[ -z "$node_ver" || $node_ver -lt 18 ]]; then
+        log_error "Node.js 18+ kerak. Joriy: $(node -v 2>/dev/null || echo 'yo'\''q'). \
+Yuklab olish: https://nodejs.org yoki: curl -fsSL https://deb.nodesource.com/setup_20.x | bash -"
+    fi
+    log_success "Node.js $(node -v) — OK"
 }
 
-# Branding rasmlarini tekshirish
+# Fix #6: branding fayllar yo'q bo'lsa ogohlantir, to'xtatma
 check_assets() {
     log_info "Branding rasmlar tekshirilmoqda..."
-    local warn=0
+    local missing=()
 
-    if [[ ! -f "$PROJECT_ROOT/assets/branding/boot.png" ]]; then
-        log_warn "assets/branding/boot.png topilmadi — placeholder ishlatiladi"
-        warn=1
-    fi
-    if [[ ! -f "$PROJECT_ROOT/assets/branding/icon.png" ]]; then
-        log_warn "assets/branding/icon.png topilmadi — placeholder ishlatiladi"
-        warn=1
-    fi
+    [[ ! -f "$PROJECT_ROOT/assets/branding/boot.png" ]] && missing+=("assets/branding/boot.png")
+    [[ ! -f "$PROJECT_ROOT/assets/branding/icon.png" ]] && missing+=("assets/branding/icon.png")
     for i in $(seq 1 10); do
-        if [[ ! -f "$PROJECT_ROOT/assets/branding/wallpapers/wallpaper-$i.png" ]]; then
-            log_warn "wallpaper-$i.png topilmadi"
-            warn=1
-        fi
+        [[ ! -f "$PROJECT_ROOT/assets/branding/wallpapers/wallpaper-$i.png" ]] \
+            && missing+=("assets/branding/wallpapers/wallpaper-$i.png")
     done
 
-    if [[ $warn -eq 1 ]]; then
-        log_warn "Ba'zi branding fayllar yo'q. Scriptlar davom etadi, lekin placeholder ko'rinishi chiqadi."
+    if [[ ${#missing[@]} -eq 0 ]]; then
+        log_success "Barcha 12 ta branding fayl mavjud"
     else
-        log_success "Barcha branding fayllari mavjud"
+        log_warn "${#missing[@]} ta fayl topilmadi (ISO placeholder bilan chiqadi):"
+        for f in "${missing[@]}"; do
+            echo -e "     ${RED}✗${NC} $f"
+        done
+        echo ""
+        log_warn "Rasmlarni qo'shish uchun README.md ni o'qing."
     fi
+    # Skript to'xtatilmaydi — rasmlar bo'lmasa ham ISO build davom etadi
 }
 
-# Dagzo Learn appni build qilish
+# Fix #1: npm install --production → npm install (devDependencies kerak)
 build_app() {
     log_info "Dagzo Learn app build qilinmoqda..."
+    local APP="$PROJECT_ROOT/apps/dagzo-learn"
 
-    if [[ ! -d "$PROJECT_ROOT/apps/dagzo-learn/node_modules" ]]; then
-        log_info "npm install ishga tushirilmoqda..."
-        cd "$PROJECT_ROOT/apps/dagzo-learn"
-        npm install --production
-        cd "$PROJECT_ROOT"
-    fi
+    cd "$APP"
 
-    cd "$PROJECT_ROOT/apps/dagzo-learn"
-    npm run build
-    npm run dist:linux || log_warn "Electron dist xato (dist fayli bo'lsa davom etadi)"
+    # devDependencies ham o'rnatilsin (vite, electron-builder ular ichida)
+    log_info "npm install (devDependencies bilan)..."
+    npm install        # Fix #1: --production olib tashlandi
+
+    # Branding fayllarni public/ ga ko'chirish
+    bash "$PROJECT_ROOT/scripts/build-app.sh" react-only
+
+    log_info "Electron Linux build..."
+    npm run dist:linux || log_warn "Electron dist xato — dist fayli bo'lsa davom etadi"
+
     cd "$PROJECT_ROOT"
-
-    log_success "Dagzo Learn app tayyor"
+    log_success "Dagzo Learn build yakunlandi"
 }
 
 # live-build sozlash
 setup_livebuild() {
-    log_info "live-build konfiguratsiyasi sozlanmoqda..."
-
+    log_info "live-build sozlanmoqda..."
     mkdir -p "$BUILD_DIR"
     cd "$BUILD_DIR"
 
-    # Oldingi build tozalash
     lb clean --purge 2>/dev/null || true
 
-    # auto/config nusxalash
     mkdir -p auto
     cp "$LB_DIR/auto/config" auto/config
     chmod +x auto/config
 
-    # Paket ro'yxati
     mkdir -p config/package-lists
     cp "$LB_DIR/config/package-lists/dagzo.list.chroot" config/package-lists/
 
-    # lb config ishga tushirish
     bash auto/config
-
     log_success "live-build sozlandi"
 }
 
 # Branding fayllarni chroot ichiga ko'chirish
 inject_branding() {
-    log_info "Branding fayllari chroot ichiga ko'chirilmoqda..."
+    log_info "Branding fayllari inject qilinmoqda..."
+    local ci="$BUILD_DIR/config/includes.chroot"
 
-    local chroot_includes="$BUILD_DIR/config/includes.chroot"
-    mkdir -p "$chroot_includes/opt/dagzo/branding/wallpapers"
-    mkdir -p "$chroot_includes/opt/dagzo/apps"
-    mkdir -p "$chroot_includes/usr/share/plymouth/themes/dagzo"
-    mkdir -p "$chroot_includes/etc/xdg/autostart"
-    mkdir -p "$chroot_includes/usr/share/applications"
+    mkdir -p \
+        "$ci/opt/dagzo/branding/wallpapers" \
+        "$ci/opt/dagzo/apps" \
+        "$ci/usr/share/plymouth/themes/dagzo" \
+        "$ci/usr/share/icons/hicolor/256x256/apps" \
+        "$ci/etc/xdg/autostart" \
+        "$ci/usr/share/applications"
 
-    # Branding rasmlar
-    [[ -f "$PROJECT_ROOT/assets/branding/boot.png" ]] && \
-        cp "$PROJECT_ROOT/assets/branding/boot.png" "$chroot_includes/opt/dagzo/branding/"
-    [[ -f "$PROJECT_ROOT/assets/branding/icon.png" ]] && \
-        cp "$PROJECT_ROOT/assets/branding/icon.png" "$chroot_includes/opt/dagzo/branding/"
+    # Boot splash
+    [[ -f "$PROJECT_ROOT/assets/branding/boot.png" ]] && {
+        cp "$PROJECT_ROOT/assets/branding/boot.png" "$ci/opt/dagzo/branding/"
+        cp "$PROJECT_ROOT/assets/branding/boot.png" "$ci/usr/share/plymouth/themes/dagzo/"
+    }
 
+    # Icon — Fix #7: hicolor themes ga ham ko'chirish
+    [[ -f "$PROJECT_ROOT/assets/branding/icon.png" ]] && {
+        cp "$PROJECT_ROOT/assets/branding/icon.png" "$ci/opt/dagzo/branding/"
+        cp "$PROJECT_ROOT/assets/branding/icon.png" \
+           "$ci/usr/share/icons/hicolor/256x256/apps/dagzo-learn.png"
+    }
+
+    # Wallpaperlar
     for i in $(seq 1 10); do
         [[ -f "$PROJECT_ROOT/assets/branding/wallpapers/wallpaper-$i.png" ]] && \
             cp "$PROJECT_ROOT/assets/branding/wallpapers/wallpaper-$i.png" \
-               "$chroot_includes/opt/dagzo/branding/wallpapers/"
+               "$ci/opt/dagzo/branding/wallpapers/"
     done
 
-    # Plymouth theme
-    cp "$PROJECT_ROOT/os/plymouth/dagzo/dagzo.plymouth" \
-       "$chroot_includes/usr/share/plymouth/themes/dagzo/"
-    cp "$PROJECT_ROOT/os/plymouth/dagzo/dagzo.script" \
-       "$chroot_includes/usr/share/plymouth/themes/dagzo/"
-    [[ -f "$PROJECT_ROOT/assets/branding/boot.png" ]] && \
-        cp "$PROJECT_ROOT/assets/branding/boot.png" \
-           "$chroot_includes/usr/share/plymouth/themes/dagzo/"
+    # Plymouth theme fayllari
+    cp "$PROJECT_ROOT/os/plymouth/dagzo/dagzo.plymouth" "$ci/usr/share/plymouth/themes/dagzo/"
+    cp "$PROJECT_ROOT/os/plymouth/dagzo/dagzo.script"   "$ci/usr/share/plymouth/themes/dagzo/"
 
     # Desktop fayllari
-    cp "$PROJECT_ROOT/os/desktop-files/dagzo-learn.desktop" \
-       "$chroot_includes/usr/share/applications/"
-    cp "$PROJECT_ROOT/os/autostart/dagzo-learn.desktop" \
-       "$chroot_includes/etc/xdg/autostart/"
+    cp "$PROJECT_ROOT/os/desktop-files/dagzo-learn.desktop" "$ci/usr/share/applications/"
+    cp "$PROJECT_ROOT/os/autostart/dagzo-learn.desktop"     "$ci/etc/xdg/autostart/"
 
-    # Systemd service
-    mkdir -p "$chroot_includes/etc/systemd/user"
-    cp "$PROJECT_ROOT/os/systemd/dagzo-learn-autostart.service" \
-       "$chroot_includes/etc/systemd/user/"
+    # Systemd user service
+    mkdir -p "$ci/etc/systemd/user"
+    cp "$PROJECT_ROOT/os/systemd/dagzo-learn-autostart.service" "$ci/etc/systemd/user/"
 
-    # OS branding script chroot hookiga
-    mkdir -p "$BUILD_DIR/config/hooks/normal"
-    cp "$PROJECT_ROOT/os/branding-scripts/set-os-release.sh" \
-       "$BUILD_DIR/config/hooks/normal/9999-dagzo-branding.hook.chroot"
-    chmod +x "$BUILD_DIR/config/hooks/normal/9999-dagzo-branding.hook.chroot"
-
-    log_success "Branding fayllari ko'chirildi"
+    log_success "Branding fayllari inject qilindi"
 }
 
-# Dagzo Learn appni chroot ichiga joylashtirish
+# Dagzo Learn app ni chroot ichiga joylashtirish
 inject_app() {
-    log_info "Dagzo Learn app chroot ichiga ko'chirilmoqda..."
-
-    local chroot_includes="$BUILD_DIR/config/includes.chroot"
+    log_info "Dagzo Learn app inject qilinmoqda..."
+    local ci="$BUILD_DIR/config/includes.chroot"
     local app_dist="$PROJECT_ROOT/apps/dagzo-learn/dist-electron"
 
-    mkdir -p "$chroot_includes/opt/dagzo/dagzo-learn"
+    mkdir -p "$ci/opt/dagzo/dagzo-learn"
 
-    if [[ -d "$app_dist" ]]; then
-        cp -r "$app_dist/"* "$chroot_includes/opt/dagzo/dagzo-learn/" 2>/dev/null || true
-        log_success "Dagzo Learn ko'chirildi"
+    # AppImage — eng afzal variant
+    local appimage
+    appimage=$(ls "$app_dist/"*.AppImage 2>/dev/null | head -1)
+    if [[ -n "$appimage" ]]; then
+        cp "$appimage" "$ci/opt/dagzo/dagzo-learn/dagzo-learn.AppImage"
+        chmod +x "$ci/opt/dagzo/dagzo-learn/dagzo-learn.AppImage"
+        # Symlink: dagzo-learn → dagzo-learn.AppImage
+        ln -sf /opt/dagzo/dagzo-learn/dagzo-learn.AppImage \
+               "$ci/opt/dagzo/dagzo-learn/dagzo-learn"
+        log_success "AppImage inject qilindi"
+
+    # linux-unpacked
+    elif [[ -d "$app_dist/linux-unpacked" ]]; then
+        cp -r "$app_dist/linux-unpacked/." "$ci/opt/dagzo/dagzo-learn/"
+        chmod +x "$ci/opt/dagzo/dagzo-learn/dagzo-learn"
+        log_success "linux-unpacked binary inject qilindi"
+
     else
-        log_warn "Dagzo Learn dist topilmadi — app avval build qilinishi kerak"
+        log_warn "Dagzo Learn dist topilmadi — ISO'da app bo'lmaydi"
+        log_warn "Avval: scripts/build-app.sh && keyin qayta build qiling"
     fi
+}
+
+# Fix #9: Chroot ichida bajariladigan post-install hooklari
+inject_chroot_hooks() {
+    log_info "Chroot hooklari yaratilmoqda..."
+    local hooks="$BUILD_DIR/config/hooks/normal"
+    mkdir -p "$hooks"
+
+    # Hook 1: OS branding (os-release, hostname, issue)
+    cp "$PROJECT_ROOT/os/branding-scripts/set-os-release.sh" \
+       "$hooks/9997-dagzo-os-release.hook.chroot"
+    chmod +x "$hooks/9997-dagzo-os-release.hook.chroot"
+
+    # Hook 2: Plymouth, icon cache, desktop database
+    cat > "$hooks/9998-dagzo-postinstall.hook.chroot" << 'HOOK'
+#!/bin/bash
+set -e
+echo "[dagzo] Post-install hook ishga tushdi..."
+
+# Plymouth default theme
+if command -v update-alternatives &>/dev/null && \
+   [[ -f /usr/share/plymouth/themes/dagzo/dagzo.plymouth ]]; then
+    update-alternatives --install \
+        /usr/share/plymouth/themes/default.plymouth \
+        default.plymouth \
+        /usr/share/plymouth/themes/dagzo/dagzo.plymouth \
+        100 2>/dev/null || true
+    update-alternatives --set \
+        default.plymouth \
+        /usr/share/plymouth/themes/dagzo/dagzo.plymouth 2>/dev/null || true
+    echo "[dagzo] Plymouth theme: dagzo"
+fi
+
+# initramfs (Plymouth uchun)
+update-initramfs -u 2>/dev/null || echo "[dagzo] initramfs yangilanmadi (kechiktirilgan)"
+
+# GTK icon cache — Fix #7
+if command -v gtk-update-icon-cache &>/dev/null; then
+    gtk-update-icon-cache -f /usr/share/icons/hicolor 2>/dev/null || true
+    echo "[dagzo] GTK icon cache yangilandi"
+fi
+
+# Desktop database
+if command -v update-desktop-database &>/dev/null; then
+    update-desktop-database /usr/share/applications 2>/dev/null || true
+    echo "[dagzo] Desktop database yangilandi"
+fi
+
+# dagzo foydalanuvchi yaratish (agar yo'q bo'lsa)
+if ! id dagzo &>/dev/null; then
+    useradd -m -s /bin/bash -G sudo,audio,video,netdev dagzo 2>/dev/null || true
+    echo "dagzo:dagzo" | chpasswd 2>/dev/null || true
+    echo "[dagzo] dagzo foydalanuvchi yaratildi"
+fi
+
+# Desktop papkasi
+mkdir -p /home/dagzo/Desktop
+cp /usr/share/applications/dagzo-learn.desktop \
+   /home/dagzo/Desktop/Dagzo-Learn.desktop 2>/dev/null || true
+chmod +x /home/dagzo/Desktop/Dagzo-Learn.desktop 2>/dev/null || true
+chown -R dagzo:dagzo /home/dagzo/ 2>/dev/null || true
+
+# /opt/dagzo papkalari
+mkdir -p /opt/dagzo/apps /opt/dagzo/branding/wallpapers
+
+echo "[dagzo] Post-install hook yakunlandi"
+HOOK
+    chmod +x "$hooks/9998-dagzo-postinstall.hook.chroot"
+
+    # Hook 3: Dagzo Learn binary symlink va permissions
+    cat > "$hooks/9999-dagzo-learn-setup.hook.chroot" << 'HOOK'
+#!/bin/bash
+set -e
+
+INSTALL_DIR="/opt/dagzo/dagzo-learn"
+
+if [[ ! -d "$INSTALL_DIR" ]]; then
+    echo "[dagzo] Dagzo Learn topilmadi — skip"
+    exit 0
+fi
+
+# AppImage mavjud bo'lsa symlink yaratish
+if [[ -f "$INSTALL_DIR/dagzo-learn.AppImage" ]]; then
+    chmod +x "$INSTALL_DIR/dagzo-learn.AppImage"
+    ln -sf "$INSTALL_DIR/dagzo-learn.AppImage" "$INSTALL_DIR/dagzo-learn" 2>/dev/null || true
+    echo "[dagzo] AppImage symlink yaratildi"
+elif [[ -f "$INSTALL_DIR/dagzo-learn" ]]; then
+    chmod +x "$INSTALL_DIR/dagzo-learn"
+    echo "[dagzo] dagzo-learn binary ruxsati berildi"
+fi
+
+# Autostart yoqish
+if command -v systemctl &>/dev/null; then
+    systemctl enable dagzo-learn-autostart.service 2>/dev/null || true
+fi
+
+echo "[dagzo] Dagzo Learn setup yakunlandi"
+HOOK
+    chmod +x "$hooks/9999-dagzo-learn-setup.hook.chroot"
+
+    log_success "3 ta chroot hook yaratildi"
 }
 
 # ISO build
 build_iso() {
-    log_info "ISO build qilinmoqda (bu uzoq vaqt olishi mumkin)..."
+    log_info "ISO build qilinmoqda (bu 15-40 daqiqa olishi mumkin)..."
     cd "$BUILD_DIR"
 
     lb build 2>&1 | tee "$BUILD_DIR/build.log"
 
-    if [[ -f "$BUILD_DIR/live-image-amd64.hybrid.iso" ]]; then
+    local iso
+    iso=$(ls "$BUILD_DIR/"*.iso 2>/dev/null | head -1)
+    if [[ -n "$iso" ]]; then
         mkdir -p "$DIST_DIR"
-        mv "$BUILD_DIR/live-image-amd64.hybrid.iso" "$DIST_DIR/dagzo-os.iso"
+        mv "$iso" "$DIST_DIR/dagzo-os.iso"
         log_success "ISO tayyor: $DIST_DIR/dagzo-os.iso"
         ls -lh "$DIST_DIR/dagzo-os.iso"
     else
-        log_error "ISO yaratilmadi. Log: $BUILD_DIR/build.log"
+        log_error "ISO yaratilmadi. Log faylini tekshiring: $BUILD_DIR/build.log"
     fi
 }
 
 # Main
 main() {
     echo ""
-    echo -e "${CYAN}╔═══════════════════════════════════╗${NC}"
-    echo -e "${CYAN}║   Dagzo OS — ISO Build Script      ║${NC}"
-    echo -e "${CYAN}╚═══════════════════════════════════╝${NC}"
+    echo -e "${CYAN}╔══════════════════════════════════════╗${NC}"
+    echo -e "${CYAN}║    Dagzo OS — ISO Build Script        ║${NC}"
+    echo -e "${CYAN}╚══════════════════════════════════════╝${NC}"
     echo ""
 
     check_deps
-    check_assets
+    check_assets     # to'xtatmaydi, faqat ogohlantiradi
     build_app
     setup_livebuild
     inject_branding
     inject_app
+    inject_chroot_hooks   # Fix #9
     build_iso
 
     echo ""
-    echo -e "${GREEN}╔═══════════════════════════════════╗${NC}"
-    echo -e "${GREEN}║   Build muvaffaqiyatli yakunlandi! ║${NC}"
-    echo -e "${GREEN}╚═══════════════════════════════════╝${NC}"
+    echo -e "${GREEN}╔══════════════════════════════════════╗${NC}"
+    echo -e "${GREEN}║   Build muvaffaqiyatli yakunlandi!    ║${NC}"
+    echo -e "${GREEN}╚══════════════════════════════════════╝${NC}"
     echo -e "  ISO joyi: ${CYAN}$DIST_DIR/dagzo-os.iso${NC}"
     echo ""
 }

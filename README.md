@@ -10,26 +10,56 @@ Dagzo OS — Debian asosida remaster qilingan maxsus ta'lim operatsion tizimi.
 
 ```
 dagzo-os/
-├── assets/branding/          # Logo, boot splash, wallpaperlar
+├── assets/branding/          # Logo, boot splash, wallpaperlar (git'da yo'q — qo'lda qo'yiladi)
+│   ├── icon.png              # 512x512 px — app icon
+│   ├── boot.png              # 1920x1080 px — Plymouth / GRUB background
+│   └── wallpapers/
+│       ├── wallpaper-1.png   # 1920x1080 px
+│       ├── wallpaper-2.png   # Default desktop fon (XFCE autostart)
+│       └── ...wallpaper-10.png
 ├── os/                       # OS konfiguratsiya fayllari
 │   ├── live-build/           # Debian live-build konfiguratsiyasi
 │   ├── plymouth/             # Boot splash theme
-│   ├── grub/                 # GRUB konfiguratsiyasi
+│   ├── grub/                 # GRUB2 konfiguratsiyasi va theme
 │   ├── desktop-files/        # .desktop fayllari
-│   └── autostart/            # Autostart konfiguratsiyasi
-├── apps/dagzo-learn/         # Electron/React o'quv dasturi
-│   ├── src/                  # React frontend
-│   ├── electron/             # Electron main process
-│   └── backend/              # Wi-Fi API backend
-├── lesson-template/          # Darslik shablon
+│   ├── autostart/            # XDG autostart
+│   ├── systemd/              # systemd user service
+│   └── branding-scripts/     # set-os-release.sh
+├── apps/dagzo-learn/         # Electron 28 + React 18 + Vite 5 o'quv dasturi
+│   ├── src/                  # React frontend (pages, components, styles)
+│   ├── electron/             # Electron main.js, preload.js
+│   └── backend/              # Wi-Fi API (Express + nmcli)
+├── lesson-template/          # Darslik shablon va namuna
+│   ├── app/                  # index.html, config.json, tests/
+│   └── installer/            # NSIS Windows installer script
 └── scripts/                  # Build va install scriptlari
+    ├── build-os.sh           # ISO yaratish (sudo kerak)
+    ├── build-app.sh          # Faqat React + Electron build
+    ├── install-dagzo-learn.sh # Mavjud tizimga app o'rnatish
+    └── install-branding.sh   # Mavjud tizimga branding o'rnatish
 ```
 
 ---
 
-## Tezkor boshlash
+## Talablar
 
-### 1. Kerakli paketlar (Ubuntu/Debian build mashinasida)
+### Node.js versiyasi
+
+**Node.js 18 yoki undan yuqori versiya talab etiladi.**
+
+```bash
+node -v   # v18.x.x yoki v20.x.x bo'lishi kerak
+```
+
+Agar Node.js 18+ o'rnatilmagan bo'lsa:
+```bash
+curl -fsSL https://deb.nodesource.com/setup_20.x | sudo bash -
+sudo apt-get install -y nodejs
+```
+
+> **Xato:** `build-os.sh` Node.js versiyasini tekshiradi va 18 dan past bo'lsa to'xtaydi.
+
+### Kerakli tizim paketlari (Ubuntu/Debian build mashinasida)
 
 ```bash
 sudo apt-get install -y \
@@ -48,72 +78,143 @@ sudo apt-get install -y \
   imagemagick
 ```
 
-### 2. Node.js paketlarni o'rnatish
-
-```bash
-cd apps/dagzo-learn
-npm install
-```
-
-### 3. Dagzo Learn appni build qilish
-
-```bash
-scripts/build-app.sh
-```
-
-### 4. ISO build qilish
-
-```bash
-sudo scripts/build-os.sh
-```
-
 ---
 
 ## Branding rasmlari qayerga qo'yiladi
 
-| Fayl | Joyi | Maqsad |
-|------|------|--------|
-| boot.png | `assets/branding/boot.png` | Plymouth boot splash va GRUB background |
-| icon.png | `assets/branding/icon.png` | Dagzo Learn ikonkasi |
-| wallpaper-1.png ... wallpaper-10.png | `assets/branding/wallpapers/` | Desktop fon rasmlari |
-| wallpaper-2.png | `assets/branding/wallpapers/wallpaper-2.png` | Default desktop fon rasmi |
+Branding rasmlari git'da saqlanmaydi. Build qilishdan **oldin** quyidagi joylarga qo'yilishi kerak:
+
+| Fayl | To'liq yo'l | Maqsad |
+|------|-------------|--------|
+| `icon.png` | `assets/branding/icon.png` | App icon, desktop shortcut, hicolor theme |
+| `boot.png` | `assets/branding/boot.png` | Plymouth boot splash, GRUB background |
+| `wallpaper-1.png` | `assets/branding/wallpapers/wallpaper-1.png` | Settings sahifasida tanlash mumkin |
+| `wallpaper-2.png` | `assets/branding/wallpapers/wallpaper-2.png` | **Default** XFCE desktop fon rasmi |
+| `wallpaper-3.png` … `wallpaper-10.png` | `assets/branding/wallpapers/` | Settings sahifasida tanlash mumkin |
 
 **Tavsiya etilgan o'lchamlar:**
-- boot.png: 1920x1080 px, PNG format
-- icon.png: 512x512 px, PNG format
-- wallpaper-*.png: 1920x1080 px, PNG format
+- `icon.png` — 512×512 px, PNG
+- `boot.png` — 1920×1080 px, PNG
+- `wallpaper-*.png` — 1920×1080 px, PNG
+
+> **Eslatma:** Rasmlar yo'q bo'lsa ISO build to'xtatilmaydi — ogohlantirish chiqadi va davom etadi. Lekin tizimda placeholder yoki bo'sh joy ko'rinadi.
 
 ---
 
-## Dagzo Learn qanday ishga tushadi
+## ISO build ketma-ketligi
+
+### 1. Branding rasmlarini joylashtiring
+
+```bash
+cp /siz/rasmlari/icon.png       assets/branding/icon.png
+cp /siz/rasmlari/boot.png       assets/branding/boot.png
+cp /siz/rasmlari/wallpaper-*.png assets/branding/wallpapers/
+```
+
+### 2. npm paketlarni o'rnatish
+
+```bash
+cd apps/dagzo-learn
+npm install      # devDependencies ham kerak (vite, electron-builder)
+cd ../..
+```
+
+> **Xato:** `npm install --production` ishlatmang — `vite` va `electron-builder` devDependencies ichida, ular o'rnatilmay qoladi.
+
+### 3. Dagzo Learn appni build qilish
+
+```bash
+bash scripts/build-app.sh
+```
+
+Bu qadam:
+- Branding rasmlarini `apps/dagzo-learn/public/` ga ko'chiradi
+- React (Vite) build qiladi → `apps/dagzo-learn/dist/`
+- Electron Linux build qiladi → `apps/dagzo-learn/dist-electron/`
+
+### 4. ISO build (root kerak)
+
+```bash
+sudo bash scripts/build-os.sh
+# Natija: dist/dagzo-os.iso
+# Vaqt: 15–40 daqiqa
+```
+
+Build jarayoni avtomatik bajaradi:
+- live-build sozlash (Debian Bookworm amd64, XFCE4)
+- Branding, app va Plymouth theme fayllarni chroot ichiga inject qilish
+- 3 ta post-install hook ishga tushirish (os-release, Plymouth, Dagzo Learn setup)
+- ISO compress va package qilish
+
+### 5. USB ga yozish
+
+```bash
+# /dev/sdX ni to'g'ri disk bilan almashtiring!
+sudo dd if=dist/dagzo-os.iso of=/dev/sdX bs=4M status=progress
+sudo sync
+```
+
+### 6. QEMU/VirtualBox da sinash
+
+```bash
+# QEMU
+qemu-system-x86_64 -m 2048 -cdrom dist/dagzo-os.iso -boot d -vga std
+
+# VirtualBox: New > Debian 64-bit > RAM 2GB+ > Storage > ISO ni ulang
+```
+
+---
+
+## Mavjud tizimga o'rnatish
+
+### Faqat app o'rnatish
+
+```bash
+sudo bash scripts/install-dagzo-learn.sh
+# O'rnatiladi: /opt/dagzo/dagzo-learn/dagzo-learn
+```
+
+### Faqat branding o'rnatish
+
+```bash
+sudo bash scripts/install-branding.sh
+# Plymouth, GRUB, wallpaper, icon, hostname
+```
+
+---
+
+## Dagzo Learn ishga tushirish
 
 ### Development rejimida
 
 ```bash
 cd apps/dagzo-learn
-npm run dev          # React + Vite dev server
-npm run electron     # Electron + React
+npm install
+npm run electron    # React dev server + Electron
 ```
 
-### Production build
+### Production (o'rnatilgan tizimda)
 
+```bash
+/opt/dagzo/dagzo-learn/dagzo-learn --no-sandbox
+```
+
+### Backend (Wi-Fi API)
+
+Electron main process `apps/dagzo-learn/backend/server.js` ni avtomatik `child_process.fork()` orqali ishga tushiradi. Alohida ishga tushirish shart emas.
+
+Manual test:
 ```bash
 cd apps/dagzo-learn
-npm run build        # React build
-npm run dist         # Electron installer build
-```
-
-### Tizimga o'rnatish (Dagzo OS ichida)
-
-```bash
-sudo scripts/install-dagzo-learn.sh
+node backend/server.js
+# Port 3001 da ishga tushadi
 ```
 
 ---
 
 ## Darsliklar qanday qo'shiladi
 
-### Usul 1: Papka sifatida qo'shish
+### Usul 1: Papka sifatida (Dagzo OS ichida)
 
 ```bash
 sudo cp -r mening-darsligim/ /opt/dagzo/apps/
@@ -131,7 +232,7 @@ mening-darsligim/
 └── tests/           # .json testlar
 ```
 
-config.json:
+`config.json` namunasi:
 ```json
 {
   "name": "Matematika 5",
@@ -147,151 +248,153 @@ config.json:
 ### Usul 2: Linux paket sifatida
 
 ```bash
-# AppImage o'rnatish
-scripts/build-lesson-linux.sh --format appimage --lesson lesson-template/app
-# .deb o'rnatish
-scripts/build-lesson-linux.sh --format deb --lesson lesson-template/app
+bash scripts/build-lesson-linux.sh --format appimage --lesson lesson-template/app
+bash scripts/build-lesson-linux.sh --format deb     --lesson lesson-template/app
 ```
 
----
-
-## Windows setup.exe qanday build qilinadi
-
-Windows'da darsliklarni `setup.exe` sifatida chiqarish:
+### Windows setup.exe
 
 ```bash
-# Windows build uchun (Linux'da wine + nsis kerak)
-scripts/build-lesson-windows.sh --lesson lesson-template/app --name "Matematika_5"
+bash scripts/build-lesson-windows.sh --lesson lesson-template/app --name "Matematika_5"
 # Natija: dist/Matematika_5_Setup.exe
 ```
 
-**Windows'da setup.exe o'rnatganda:**
-- Darslik `C:\Program Files\Dagzo\Darsliklar\` ga o'rnatiladi
-- Desktop shortcut yaratiladi
-- Start Menu > Dagzo papkasi paydo bo'ladi
-- Icon bosilganda darslik fullscreen ochiladi
-
 ---
 
-## Linux AppImage/deb qanday build qilinadi
+## Wi-Fi API
 
-```bash
-# AppImage
-scripts/build-lesson-linux.sh --format appimage --lesson lesson-template/app --name "Matematika_5"
-# Natija: dist/Matematika_5.AppImage
+Backend Express serveri port `3001` da, faqat `127.0.0.1` da tinglaydi (xavfsiz).
 
-# .deb paket
-scripts/build-lesson-linux.sh --format deb --lesson lesson-template/app --name "matematika-5"
-# Natija: dist/matematika-5_1.0.0_amd64.deb
-```
+| Endpoint | Metod | Tavsif |
+|----------|-------|--------|
+| `/api/wifi/list` | GET | Mavjud tarmoqlar ro'yxati |
+| `/api/wifi/connect` | POST | Tarmoqqa ulanish (`{ ssid, password }`) |
+| `/api/wifi/status` | GET | Joriy ulanish holati |
+| `/api/wifi/disconnect` | POST | Tarmoqdan uzilish |
 
----
-
-## Wi-Fi API qanday ishlaydi
-
-Backend `apps/dagzo-learn/backend/server.js` da ishga tushadi.
-
-```
-GET  /api/wifi/list      — Mavjud tarmoqlar ro'yxati
-POST /api/wifi/connect   — Tarmoqqa ulanish
-     Body: { "ssid": "MyWiFi", "password": "12345678" }
-GET  /api/wifi/status    — Joriy ulanish holati
-POST /api/wifi/disconnect — Tarmoqdan uzilish
-```
-
-Backend nmcli (NetworkManager) orqali ishlaydi. nmcli o'rnatilgan bo'lishi kerak:
+NetworkManager (`nmcli`) kerak:
 ```bash
 sudo apt-get install network-manager
 ```
 
 ---
 
-## Autostart qanday yoqiladi/o'chiriladi
-
-### Yoqish (default)
-```bash
-cp os/autostart/dagzo-learn.desktop ~/.config/autostart/
-```
-
-### O'chirish
-```bash
-rm ~/.config/autostart/dagzo-learn.desktop
-```
-
-### Systemd orqali (tizim darajasida)
-```bash
-sudo systemctl enable dagzo-learn-autostart.service
-sudo systemctl disable dagzo-learn-autostart.service
-```
-
----
-
-## ISO qanday olinadi
-
-### Build jarayoni
-
-```bash
-# 1. Branding rasmlarini joylashtiring
-cp siz/boot.png assets/branding/boot.png
-cp siz/wallpaper-*.png assets/branding/wallpapers/
-cp siz/icon.png assets/branding/icon.png
-
-# 2. Dagzo Learn appni build qiling
-scripts/build-app.sh
-
-# 3. ISO build qiling (root kerak)
-sudo scripts/build-os.sh
-
-# Natija: dist/dagzo-os.iso
-```
-
-### USB ga yozish
-
-```bash
-# /dev/sdX ni to'g'ri disk bilan almashtiring!
-sudo dd if=dist/dagzo-os.iso of=/dev/sdX bs=4M status=progress sync
-# yoki
-sudo cp dist/dagzo-os.iso /dev/sdX
-sudo sync
-```
-
-### VirtualBox da sinash
-
-1. VirtualBox > New > Linux > Debian 64-bit
-2. RAM: 2GB+, Disk: 20GB+
-3. Settings > Storage > ISO ni ulang
-4. Boot
-
-### QEMU da sinash
-
-```bash
-qemu-system-x86_64 \
-  -m 2048 \
-  -cdrom dist/dagzo-os.iso \
-  -boot d \
-  -vga std
-```
-
----
-
-## Admin parol
-
-Default admin parol: `dagzo2024`
-
-Sozlamalar > Admin > Parol almashtirishdan o'zgartiriladi.
-
----
-
 ## Tizim ma'lumotlari
 
-- **OS nomi:** Dagzo OS
-- **Asos:** Debian 12 (Bookworm) minimal
-- **Desktop:** XFCE4
-- **Boot loader:** GRUB2
-- **Boot splash:** Plymouth (dagzo theme)
-- **O'quv dastur:** Dagzo Learn (Electron/React)
-- **Wi-Fi:** NetworkManager + nmcli
-- **Windows fayllari:** Wine orqali
+| Komponent | Versiya / Tavsif |
+|-----------|-----------------|
+| OS asos | Debian 12 (Bookworm) minimal |
+| Desktop | XFCE4 |
+| Boot loader | GRUB2 (custom dark theme) |
+| Boot splash | Plymouth (dagzo script theme) |
+| O'quv dastur | Dagzo Learn — Electron 28 + React 18 + Vite 5 |
+| Wi-Fi | NetworkManager + nmcli + Express API |
+| Windows fayllar | Wine orqali |
+| Node.js (build) | 18+ talab etiladi |
+| Admin parol | `dagzo2024` (Settings > Admin dan o'zgartirish mumkin) |
+
+---
+
+## Eng ko'p uchraydigan xatolar
+
+### Plymouth boot splash ko'rinmayapti
+
+```bash
+# Diagnoz
+sudo update-alternatives --config default.plymouth
+
+# Yechim
+sudo update-alternatives --install \
+  /usr/share/plymouth/themes/default.plymouth default.plymouth \
+  /usr/share/plymouth/themes/dagzo/dagzo.plymouth 100
+sudo update-alternatives --set \
+  default.plymouth \
+  /usr/share/plymouth/themes/dagzo/dagzo.plymouth
+sudo update-initramfs -u
+```
+
+### Dagzo Learn ishga tushmayapti
+
+```bash
+# Terminal orqali sinash (xato xabarini ko'rish uchun)
+/opt/dagzo/dagzo-learn/dagzo-learn --no-sandbox
+
+# AppImage FUSE xatosi bo'lsa
+sudo apt-get install libfuse2
+# yoki
+/opt/dagzo/dagzo-learn/dagzo-learn.AppImage --appimage-extract-and-run
+
+# Binary yo'q bo'lsa — qayta o'rnatish
+sudo bash scripts/install-dagzo-learn.sh
+```
+
+### Wi-Fi API ishlamayapti
+
+```bash
+# nmcli bor-yo'qligini tekshirish
+which nmcli
+nmcli device status
+
+# NetworkManager ishga tushirish
+sudo systemctl start NetworkManager
+sudo systemctl enable NetworkManager
+
+# Backend alohida sinash
+cd apps/dagzo-learn && node backend/server.js
+curl http://127.0.0.1:3001/api/wifi/status
+```
+
+### npm install xatosi (vite topilmadi)
+
+```bash
+# Xato: sh: vite: not found
+# Sabab: npm install --production ishlatilgan
+cd apps/dagzo-learn
+rm -rf node_modules
+npm install          # --production ISHLATMANG
+```
+
+### AppImage FUSE xatosi
+
+```bash
+# Xato: fuse: device not found
+sudo apt-get install libfuse2
+# yoki AppImage ni extracted rejimda ishlatish:
+/opt/dagzo/dagzo-learn/dagzo-learn.AppImage --appimage-extract
+./squashfs-root/dagzo-learn --no-sandbox
+```
+
+### live-build eski holat xatosi
+
+```bash
+# Xato: lb_build: already built / config exists
+cd build/
+sudo lb clean --purge
+cd ..
+sudo bash scripts/build-os.sh
+```
+
+### Ikonka ko'rinmayapti (GTK icon cache)
+
+```bash
+sudo gtk-update-icon-cache -f /usr/share/icons/hicolor
+sudo update-desktop-database /usr/share/applications
+xdg-icon-resource forceupdate
+```
+
+### Dagzo Learn autostart ishlamayapti
+
+```bash
+# XDG autostart fayl bor-yo'qligini tekshirish
+ls /etc/xdg/autostart/dagzo-learn.desktop
+
+# Systemd service orqali yoqish
+sudo systemctl enable dagzo-learn-autostart.service
+
+# Foydalanuvchi autostart
+mkdir -p ~/.config/autostart
+cp /etc/xdg/autostart/dagzo-learn.desktop ~/.config/autostart/
+```
 
 ---
 
@@ -307,19 +410,3 @@ Bu tizim quyidagi open-source loyihalar asosida qurilgan:
 - React (MIT)
 
 Dagzo brending, Dagzo Learn dasturi va darslik tizimi Dagzo mulki hisoblanadi.
-
----
-
-## Yordam va muammo hal qilish
-
-**Muammo:** Plymouth theme ko'rinmayapti  
-**Yechim:** `sudo update-initramfs -u` va `sudo update-alternatives --set default.plymouth /usr/share/plymouth/themes/dagzo/dagzo.plymouth`
-
-**Muammo:** Dagzo Learn ishga tushmayapti  
-**Yechim:** `/opt/dagzo/dagzo-learn/dagzo-learn --no-sandbox` buyrug'ini sinang
-
-**Muammo:** Wi-Fi API ishlamayapti  
-**Yechim:** `nmcli` o'rnatilganini tekshiring: `which nmcli`
-
-**Muammo:** .exe fayl ochilmayapti  
-**Yechim:** Wine o'rnatilganini tekshiring: `wine --version`
