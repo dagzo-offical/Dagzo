@@ -40,8 +40,8 @@ check_node() {
     fi
     local ver
     ver=$(node -v | cut -d'v' -f2 | cut -d'.' -f1)
-    if [[ $ver -lt 16 ]]; then
-        log_error "Node.js 16+ kerak. Joriy: $(node -v)"
+    if [[ $ver -lt 18 ]]; then
+        log_error "Node.js 18+ kerak. Joriy: $(node -v)"
     fi
     log_info "Node.js $(node -v), npm $(npm -v)"
 }

@@ -78,21 +78,7 @@ check_assets() {
 # Fix #1: npm install --production → npm install (devDependencies kerak)
 build_app() {
     log_info "Dagzo Learn app build qilinmoqda..."
-    local APP="$PROJECT_ROOT/apps/dagzo-learn"
-
-    cd "$APP"
-
-    # devDependencies ham o'rnatilsin (vite, electron-builder ular ichida)
-    log_info "npm install (devDependencies bilan)..."
-    npm install        # Fix #1: --production olib tashlandi
-
-    # Branding fayllarni public/ ga ko'chirish
-    bash "$PROJECT_ROOT/scripts/build-app.sh" react-only
-
-    log_info "Electron Linux build..."
-    npm run dist:linux || log_warn "Electron dist xato — dist fayli bo'lsa davom etadi"
-
-    cd "$PROJECT_ROOT"
+    bash "$PROJECT_ROOT/scripts/build-app.sh" linux
     log_success "Dagzo Learn build yakunlandi"
 }
 
