@@ -152,15 +152,33 @@ inject_branding() {
     chmod +x "$ci/usr/local/bin/dagzo-run-lesson"
     log_success "dagzo-run-lesson inject qilindi"
 
-    # LightDM autologin — dagzo user, XFCE session
+    # LightDM — login ekrani (autologin yo'q), XFCE session
     mkdir -p "$ci/etc/lightdm/lightdm.conf.d"
-    cat > "$ci/etc/lightdm/lightdm.conf.d/50-dagzo-autologin.conf" << 'LIGHTDM'
+    cat > "$ci/etc/lightdm/lightdm.conf.d/50-dagzo-greeter.conf" << 'LIGHTDM'
 [Seat:*]
-autologin-user=dagzo
-autologin-user-timeout=0
+greeter-session=lightdm-gtk-greeter
 user-session=xfce
 LIGHTDM
-    log_success "LightDM autologin config inject qilindi (user: dagzo, session: xfce)"
+    log_success "LightDM greeter config inject qilindi (login ekrani aktiv)"
+
+    # Calamares installer — desktop shortcut
+    mkdir -p "$ci/usr/share/applications"
+    cat > "$ci/usr/share/applications/install-dagzo.desktop" << 'INST'
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=DagzoOS o'rnatish
+Name[en]=Install DagzoOS
+Comment=DagzoOS ni diskka o'rnatish
+Comment[en]=Install DagzoOS to disk
+Exec=pkexec calamares
+Icon=calamares
+Terminal=false
+Categories=System;
+Keywords=install;installer;dagzo;
+NoDisplay=false
+INST
+    log_success "Calamares installer shortcut yaratildi"
 
     log_success "Branding fayllari inject qilindi"
 }
@@ -318,11 +336,9 @@ mkdir -p /opt/dagzo/apps /opt/dagzo/branding/wallpapers
 chown -R dagzo:dagzo /opt/dagzo/apps 2>/dev/null || true
 chmod 775 /opt/dagzo/apps 2>/dev/null || true
 
-# dagzo sudo passwordless
-if ! grep -q "dagzo ALL=(ALL) NOPASSWD" /etc/sudoers 2>/dev/null; then
-    echo "dagzo ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
-    echo "[dagzo] sudo NOPASSWD qo'shildi"
-fi
+# dagzo sudo — parol talab qilinadi (sudo guruhida, lekin NOPASSWD yo'q)
+# useradd -G sudo orqali allaqachon sudo guruhiga qo'shilgan
+echo "[dagzo] sudo: dagzo guruhida, parol talab qilinadi"
 
 # Firefox default browser
 if command -v update-alternatives &>/dev/null; then
@@ -351,6 +367,26 @@ echo "[dagzo] XFCE preferred browser: Firefox"
 if [[ -f /usr/local/bin/dagzo-run-lesson ]]; then
     chmod +x /usr/local/bin/dagzo-run-lesson
     echo "[dagzo] dagzo-run-lesson script sozlandi"
+fi
+
+# Calamares post-install skripti — o'rnatilgan tizimda live config ni tozalash
+mkdir -p /etc/calamares/scripts
+cat > /etc/calamares/scripts/dagzo-postinstall.sh << 'CALAMARES_POST'
+#!/bin/bash
+# O'rnatilgan tizimda live-specific autologin config ni o'chirish
+# Bu skript Calamares tomonidan chroot ichida chaqiriladi
+ROOT="${1:-/}"
+rm -f "$ROOT/etc/lightdm/lightdm.conf.d/50-dagzo-autologin.conf" 2>/dev/null || true
+echo "[dagzo] Live autologin config o'chirildi"
+CALAMARES_POST
+chmod +x /etc/calamares/scripts/dagzo-postinstall.sh
+
+# Calamares settings.conf ga dagzo-postinstall qo'shish (agar mavjud bo'lsa)
+if [[ -f /etc/calamares/settings.conf ]]; then
+    if ! grep -q "dagzo-postinstall" /etc/calamares/settings.conf 2>/dev/null; then
+        sed -i '/shellprocess/a\    - dagzo-postinstall' /etc/calamares/settings.conf 2>/dev/null || true
+        echo "[dagzo] Calamares settings.conf yangilandi"
+    fi
 fi
 
 echo "[dagzo] Post-install hook yakunlandi"

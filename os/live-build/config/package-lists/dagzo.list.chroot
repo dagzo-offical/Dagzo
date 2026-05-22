@@ -115,6 +115,10 @@ virtualbox-guest-x11
 nodejs
 npm
 
+# Disk installer (Calamares)
+calamares
+calamares-settings-kali
+
 # Boshqa
 fonts-dejavu
 fonts-liberation
