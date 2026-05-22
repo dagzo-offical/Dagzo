@@ -68,6 +68,9 @@
     "directories": {
       "output": "dist-electron"
     },
+    "asarUnpack": [
+      "backend/**"
+    ],
     "files": [
       "dist/**/*",
       "electron/**/*",

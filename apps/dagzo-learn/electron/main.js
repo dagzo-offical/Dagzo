@@ -24,14 +24,36 @@ let mainWindow = null
 let lessonWindow = null
 let backendProcess = null  // Fix #3
 
-// ── Fix #3: Wi-Fi backend auto-start ────────────────────────────────────────
-function startBackend() {
-  const backendPath = isDev
-    ? path.join(__dirname, '../backend/server.js')
-    : path.join(path.dirname(app.getPath('exe')), 'resources/app/backend/server.js')
+// ── Wi-Fi backend path resolution ───────────────────────────────────────────
+// fork() asar-ichidagi faylni ishga tushira olmaydi, shuning uchun
+// asarUnpack orqali chiqarilgan app.asar.unpacked birinchi tekshiriladi.
+function resolveBackendPath() {
+  if (isDev) return path.join(__dirname, '../backend/server.js')
 
-  if (!fs.existsSync(backendPath)) {
-    console.warn('[backend] server.js topilmadi:', backendPath)
+  const candidates = [
+    path.join(process.resourcesPath, 'app.asar.unpacked', 'backend', 'server.js'),
+    path.join(process.resourcesPath, 'app.asar', 'backend', 'server.js'),
+    path.join(process.resourcesPath, 'app', 'backend', 'server.js'),
+    path.join(__dirname, '../backend', 'server.js'),
+  ]
+
+  for (const p of candidates) {
+    if (fs.existsSync(p)) {
+      console.log('[backend] path topildi:', p)
+      return p
+    }
+  }
+
+  console.warn('[backend] server.js hech bir pathda topilmadi:', candidates)
+  return null
+}
+
+// ── Wi-Fi backend auto-start ─────────────────────────────────────────────────
+function startBackend() {
+  const backendPath = resolveBackendPath()
+
+  if (!backendPath) {
+    console.warn('[backend] server.js topilmadi — Wi-Fi API ishga tushmaydi')
     return
   }
 
