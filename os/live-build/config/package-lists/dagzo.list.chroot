@@ -43,6 +43,9 @@ vlc
 wine
 wine64
 
+# AppImage fallback uchun (linux-unpacked topilmasa)
+libfuse2
+
 # Node.js (Dagzo Learn uchun)
 nodejs
 npm

@@ -164,6 +164,7 @@ inject_branding() {
 }
 
 # Dagzo Learn app ni chroot ichiga joylashtirish
+# Afzallik: linux-unpacked (FUSE talab qilmaydi) > AppImage (fallback)
 inject_app() {
     log_info "Dagzo Learn app inject qilinmoqda..."
     local ci="$BUILD_DIR/config/includes.chroot"
@@ -171,22 +172,20 @@ inject_app() {
 
     mkdir -p "$ci/opt/dagzo/dagzo-learn"
 
-    # AppImage — eng afzal variant
-    local appimage
-    appimage=$(ls "$app_dist/"*.AppImage 2>/dev/null | head -1)
-    if [[ -n "$appimage" ]]; then
-        cp "$appimage" "$ci/opt/dagzo/dagzo-learn/dagzo-learn.AppImage"
-        chmod +x "$ci/opt/dagzo/dagzo-learn/dagzo-learn.AppImage"
-        # Symlink: dagzo-learn → dagzo-learn.AppImage
-        ln -sf /opt/dagzo/dagzo-learn/dagzo-learn.AppImage \
-               "$ci/opt/dagzo/dagzo-learn/dagzo-learn"
-        log_success "AppImage inject qilindi"
-
-    # linux-unpacked
-    elif [[ -d "$app_dist/linux-unpacked" ]]; then
+    # 1. linux-unpacked — ISO uchun eng ishonchli variant (FUSE talab qilmaydi)
+    if [[ -d "$app_dist/linux-unpacked" ]]; then
         cp -r "$app_dist/linux-unpacked/." "$ci/opt/dagzo/dagzo-learn/"
         chmod +x "$ci/opt/dagzo/dagzo-learn/dagzo-learn"
-        log_success "linux-unpacked binary inject qilindi"
+        log_success "linux-unpacked binary inject qilindi: $app_dist/linux-unpacked"
+
+    # 2. AppImage — fallback (libfuse2 kerak, package listga qo'shilgan)
+    elif appimage=$(ls "$app_dist/"*.AppImage 2>/dev/null | head -1) && [[ -n "$appimage" ]]; then
+        cp "$appimage" "$ci/opt/dagzo/dagzo-learn/dagzo-learn.AppImage"
+        chmod +x "$ci/opt/dagzo/dagzo-learn/dagzo-learn.AppImage"
+        ln -sf /opt/dagzo/dagzo-learn/dagzo-learn.AppImage \
+               "$ci/opt/dagzo/dagzo-learn/dagzo-learn"
+        log_warn "AppImage inject qilindi (linux-unpacked topilmadi): $(basename "$appimage")"
+        log_warn "AppImage libfuse2 talab qiladi — package listga qo'shilgan"
 
     else
         log_warn "Dagzo Learn dist topilmadi — ISO'da app bo'lmaydi"
