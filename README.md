@@ -432,6 +432,68 @@ cp /etc/xdg/autostart/dagzo-learn.desktop ~/.config/autostart/
 
 ---
 
+## Final tekshiruv
+
+Build qilishdan oldin quyidagi tekshiruvlarni bajaring:
+
+### 1. Script sintaksisini tekshirish
+
+```bash
+bash -n scripts/build-app.sh
+bash -n scripts/build-os.sh
+bash -n scripts/install-dagzo-learn.sh
+bash -n scripts/install-branding.sh
+```
+
+### 2. App build tekshirish
+
+```bash
+bash scripts/build-app.sh
+# Kutilayotgan chiqish:
+# [OK] icon.ico yaratildi (256/128/64/48/32/16 px)
+# [OK] React build tayyor
+# [OK] Electron Linux build tayyor: apps/dagzo-learn/dist-electron
+ls apps/dagzo-learn/dist-electron/linux-unpacked/dagzo-learn
+```
+
+### 3. ISO build
+
+```bash
+sudo bash scripts/build-os.sh
+# Kutilayotgan chiqish:
+# [OK] linux-unpacked binary inject qilindi
+# [OK] .desktop Exec to'g'ri: Exec=/opt/dagzo/dagzo-learn/dagzo-learn --no-sandbox
+# [OK] ISO tayyor: dist/dagzo-os.iso
+```
+
+### 4. ISO ichida Dagzo Learn ochilmasa — nima tekshirish kerak
+
+```bash
+# Terminal orqali to'g'ridan-to'g'ri ishga tushirish (xato ko'rish uchun)
+/opt/dagzo/dagzo-learn/dagzo-learn --no-sandbox
+
+# Live boot loglari
+ls /var/log/live/
+cat /var/log/live/boot.log
+
+# Systemd journal (user session)
+journalctl --user -n 50
+journalctl -b | grep -i "dagzo\|electron"
+
+# XFCE session xatolari
+cat ~/.xsession-errors | tail -30
+
+# Binary tekshirish
+ls -la /opt/dagzo/dagzo-learn/dagzo-learn
+file /opt/dagzo/dagzo-learn/dagzo-learn
+
+# Autostart fayl mavjudligi
+ls /etc/xdg/autostart/dagzo-learn.desktop
+cat /etc/xdg/autostart/dagzo-learn.desktop
+```
+
+---
+
 ## Litsenziya
 
 Dagzo OS — Dagzo ta'lim platformasi tomonidan yaratilgan custom education OS.

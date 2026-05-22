@@ -178,6 +178,28 @@ inject_app() {
         chmod +x "$ci/opt/dagzo/dagzo-learn/dagzo-learn"
         log_success "linux-unpacked binary inject qilindi: $app_dist/linux-unpacked"
 
+        # Binary va .desktop Exec tekshirish
+        local binary="$ci/opt/dagzo/dagzo-learn/dagzo-learn"
+        if [[ ! -f "$binary" ]]; then
+            log_error "inject xato: $binary topilmadi (linux-unpacked noto'g'ri?)"
+        fi
+        if [[ ! -x "$binary" ]]; then
+            chmod +x "$binary"
+            log_warn "binary executable emas edi — ruxsat berildi"
+        fi
+        local desktop="$ci/usr/share/applications/dagzo-learn.desktop"
+        if [[ -f "$desktop" ]]; then
+            local actual_exec expected_exec="Exec=/opt/dagzo/dagzo-learn/dagzo-learn --no-sandbox"
+            actual_exec=$(grep "^Exec=" "$desktop" | head -1)
+            if [[ "$actual_exec" != "$expected_exec" ]]; then
+                log_warn ".desktop Exec noto'g'ri: '$actual_exec'"
+                sed -i "s|^Exec=.*|$expected_exec|" "$desktop"
+                log_warn ".desktop Exec to'g'irlandi: $expected_exec"
+            else
+                log_success ".desktop Exec to'g'ri: $actual_exec"
+            fi
+        fi
+
     # 2. AppImage — fallback (libfuse2 kerak, package listga qo'shilgan)
     elif appimage=$(ls "$app_dist/"*.AppImage 2>/dev/null | head -1) && [[ -n "$appimage" ]]; then
         cp "$appimage" "$ci/opt/dagzo/dagzo-learn/dagzo-learn.AppImage"
@@ -251,6 +273,42 @@ mkdir -p /home/dagzo/Desktop
 cp /usr/share/applications/dagzo-learn.desktop \
    /home/dagzo/Desktop/Dagzo-Learn.desktop 2>/dev/null || true
 chmod +x /home/dagzo/Desktop/Dagzo-Learn.desktop 2>/dev/null || true
+
+# XFCE default wallpaper konfiguratsiyasi
+XFCE_CFG_DIR="/etc/skel/.config/xfce4/xfconf/xfce-perchannel-xml"
+mkdir -p "$XFCE_CFG_DIR"
+cat > "$XFCE_CFG_DIR/xfce4-desktop.xml" << 'WALLPAPER_XML'
+<?xml version="1.0" encoding="UTF-8"?>
+<channel name="xfce4-desktop" version="1.0">
+  <property name="backdrop" type="empty">
+    <property name="screen0" type="empty">
+      <property name="monitor0" type="empty">
+        <property name="workspace0" type="empty">
+          <property name="last-image" type="string" value="/opt/dagzo/branding/wallpapers/wallpaper-2.png"/>
+          <property name="image-style" type="int" value="5"/>
+        </property>
+      </property>
+      <property name="monitor1" type="empty">
+        <property name="workspace0" type="empty">
+          <property name="last-image" type="string" value="/opt/dagzo/branding/wallpapers/wallpaper-2.png"/>
+          <property name="image-style" type="int" value="5"/>
+        </property>
+      </property>
+    </property>
+  </property>
+</channel>
+WALLPAPER_XML
+echo "[dagzo] XFCE wallpaper config /etc/skel ga yozildi"
+
+# /home/dagzo ga ham ko'chirish (agar mavjud bo'lsa)
+if [[ -d "/home/dagzo" ]]; then
+    DAGZO_XFCE_DIR="/home/dagzo/.config/xfce4/xfconf/xfce-perchannel-xml"
+    mkdir -p "$DAGZO_XFCE_DIR"
+    cp "$XFCE_CFG_DIR/xfce4-desktop.xml" "$DAGZO_XFCE_DIR/xfce4-desktop.xml"
+    chown -R dagzo:dagzo /home/dagzo/.config 2>/dev/null || true
+    echo "[dagzo] XFCE wallpaper config /home/dagzo ga ko'chirildi"
+fi
+
 chown -R dagzo:dagzo /home/dagzo/ 2>/dev/null || true
 
 # /opt/dagzo papkalari

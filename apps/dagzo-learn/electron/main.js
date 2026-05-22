@@ -1,6 +1,6 @@
 const { app, BrowserWindow, ipcMain, shell } = require('electron')
 const path = require('path')
-const { exec, fork } = require('child_process')
+const { exec, fork, spawn, spawnSync } = require('child_process')
 const fs = require('fs')
 
 const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged
@@ -79,21 +79,20 @@ function stopBackend() {
   }
 }
 
-// ── Fix #4: Wine helper — open-exe va open-file uchun umumiy funksiya ───────
-async function openWithWine(filePath) {
-  return new Promise((resolve) => {
-    const safe = filePath.replace(/"/g, '\\"')
-    exec(`wine "${safe}"`, { timeout: 5000 }, (error) => {
-      if (error) {
-        resolve({
-          success: false,
-          error: "Bu Windows dasturi Dagzo OS'da to'liq ishlamasligi mumkin.",
-        })
-      } else {
-        resolve({ success: true })
-      }
+// ── Wine helper — detached spawn, timeout yo'q, shell injection yo'q ────────
+function openWithWine(filePath) {
+  const which = spawnSync('which', ['wine'], { encoding: 'utf8' })
+  if (which.status !== 0) {
+    return Promise.resolve({
+      success: false,
+      error: "Wine o'rnatilmagan. .exe fayllarni ochish uchun Wine kerak.",
     })
-  })
+  }
+
+  // detached + unref: .exe mustaqil jarayon sifatida ishlaydi, Electron uni kutmaydi
+  const child = spawn('wine', [filePath], { detached: true, stdio: 'ignore' })
+  child.unref()
+  return Promise.resolve({ success: true })
 }
 
 // ── Main window ─────────────────────────────────────────────────────────────
