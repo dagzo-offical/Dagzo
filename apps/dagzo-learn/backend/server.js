@@ -8,7 +8,14 @@ const app = express()
 const PORT = process.env.PORT || 3001
 
 app.use(cors({
-  origin: ['http://localhost:5173', 'app://./index.html'],
+  origin: (origin, cb) => {
+    // localhost (dev), null/file:// (Electron production)
+    if (!origin || origin === 'null' || /^https?:\/\/localhost/.test(origin) || origin.startsWith('file://')) {
+      cb(null, true)
+    } else {
+      cb(null, false)
+    }
+  },
 }))
 app.use(express.json())
 

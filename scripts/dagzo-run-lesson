@@ -35,9 +35,9 @@ URL=""
 
 if [[ -f "$CONFIG_JSON" ]]; then
     if command -v python3 &>/dev/null; then
-        LESSON_NAME=$(python3 -c "import json,sys; d=json.load(open('$CONFIG_JSON')); print(d.get('name',''))" 2>/dev/null || echo "$LESSON_NAME")
-        PORT=$(python3 -c "import json,sys; d=json.load(open('$CONFIG_JSON')); print(d.get('port',''))" 2>/dev/null || echo "")
-        URL=$(python3 -c "import json,sys; d=json.load(open('$CONFIG_JSON')); print(d.get('url',''))" 2>/dev/null || echo "")
+        LESSON_NAME=$(python3 -c "import json,sys; d=json.load(open(sys.argv[1])); print(d.get('name',''))" "$CONFIG_JSON" 2>/dev/null || echo "$LESSON_NAME")
+        PORT=$(python3 -c "import json,sys; d=json.load(open(sys.argv[1])); print(d.get('port',''))" "$CONFIG_JSON" 2>/dev/null || echo "")
+        URL=$(python3 -c "import json,sys; d=json.load(open(sys.argv[1])); print(d.get('url',''))" "$CONFIG_JSON" 2>/dev/null || echo "")
     fi
 fi
 

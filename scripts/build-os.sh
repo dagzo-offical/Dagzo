@@ -111,7 +111,6 @@ inject_branding() {
         "$ci/opt/dagzo/apps" \
         "$ci/usr/share/plymouth/themes/dagzo" \
         "$ci/usr/share/icons/hicolor/256x256/apps" \
-        "$ci/etc/xdg/autostart" \
         "$ci/usr/share/applications"
 
     # Boot splash
@@ -138,13 +137,8 @@ inject_branding() {
     cp "$PROJECT_ROOT/os/plymouth/dagzo/dagzo.plymouth" "$ci/usr/share/plymouth/themes/dagzo/"
     cp "$PROJECT_ROOT/os/plymouth/dagzo/dagzo.script"   "$ci/usr/share/plymouth/themes/dagzo/"
 
-    # Desktop fayllari
+    # Desktop fayl (Applications menyusida ko'rinadi, autostart YO'Q)
     cp "$PROJECT_ROOT/os/desktop-files/dagzo-learn.desktop" "$ci/usr/share/applications/"
-    cp "$PROJECT_ROOT/os/autostart/dagzo-learn.desktop"     "$ci/etc/xdg/autostart/"
-
-    # Systemd user service
-    mkdir -p "$ci/etc/systemd/user"
-    cp "$PROJECT_ROOT/os/systemd/dagzo-learn-autostart.service" "$ci/etc/systemd/user/"
 
     # dagzo-run-lesson — Python darslik launcher
     mkdir -p "$ci/usr/local/bin"
@@ -415,10 +409,7 @@ elif [[ -f "$INSTALL_DIR/dagzo-learn" ]]; then
     echo "[dagzo] dagzo-learn binary ruxsati berildi"
 fi
 
-# Autostart XDG .desktop orqali (/etc/xdg/autostart) ishlaydi.
-# systemctl enable chroot ichida noto'g'ri ishlashi mumkin — skip.
-# systemctl enable dagzo-learn-autostart.service 2>/dev/null || true
-
+# Dagzo Learn faqat Applications menyusidan ishga tushiriladi (autostart o'chirilgan).
 echo "[dagzo] Dagzo Learn setup yakunlandi"
 HOOK
     chmod +x "$hooks/9999-dagzo-learn-setup.hook.chroot"

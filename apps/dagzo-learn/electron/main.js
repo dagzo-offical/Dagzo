@@ -15,7 +15,7 @@ const BRANDING_DIR = isDev
   : '/opt/dagzo/branding'
 
 const APPS_DIR = isDev
-  ? path.join(PROJECT_ROOT, 'lesson-template/sample-apps')
+  ? path.join(PROJECT_ROOT, 'lesson-template/app')
   : '/opt/dagzo/apps'
 
 const ADMIN_PASSWORD = process.env.DAGZO_ADMIN_PASSWORD || 'dagzo2024'

@@ -44,7 +44,6 @@ echo -e "${CYAN}Python:${NC}"
 check python3
 python3 --version &>/dev/null && pass "python3 versiya: $(python3 --version 2>&1)" || fail "python3 ishlamayapti"
 check pip3
-check python3
 [[ -f /usr/local/bin/dagzo-run-lesson ]] && pass "dagzo-run-lesson mavjud" || warn "dagzo-run-lesson topilmadi"
 echo ""
 
@@ -73,8 +72,8 @@ echo -e "${CYAN}Dagzo Learn:${NC}"
     || fail "Binary topilmadi: /opt/dagzo/dagzo-learn/dagzo-learn"
 [[ -x /opt/dagzo/dagzo-learn/dagzo-learn ]] && pass "Binary executable" \
     || fail "Binary executable emas"
-[[ -f /etc/xdg/autostart/dagzo-learn.desktop ]] && pass "Autostart mavjud" \
-    || warn "Autostart topilmadi: /etc/xdg/autostart/dagzo-learn.desktop"
+[[ -f /usr/share/applications/dagzo-learn.desktop ]] && pass "dagzo-learn.desktop (applications) mavjud" \
+    || warn "dagzo-learn.desktop topilmadi: /usr/share/applications/"
 [[ -f /usr/share/applications/dagzo-learn.desktop ]] && pass "Desktop entry mavjud" \
     || warn "Desktop entry topilmadi"
 echo ""
