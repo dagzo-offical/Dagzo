@@ -71,6 +71,11 @@ libcups2
 nodejs
 npm
 
+# VM display drayverlar (VirtualBox, VMware)
+xserver-xorg-video-vmware
+open-vm-tools-desktop
+virtualbox-guest-x11
+
 # Boshqa
 fonts-dejavu
 fonts-liberation

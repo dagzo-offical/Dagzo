@@ -146,6 +146,16 @@ inject_branding() {
     mkdir -p "$ci/etc/systemd/user"
     cp "$PROJECT_ROOT/os/systemd/dagzo-learn-autostart.service" "$ci/etc/systemd/user/"
 
+    # LightDM autologin — dagzo user, XFCE session
+    mkdir -p "$ci/etc/lightdm/lightdm.conf.d"
+    cat > "$ci/etc/lightdm/lightdm.conf.d/50-dagzo-autologin.conf" << 'LIGHTDM'
+[Seat:*]
+autologin-user=dagzo
+autologin-user-timeout=0
+user-session=xfce
+LIGHTDM
+    log_success "LightDM autologin config inject qilindi (user: dagzo, session: xfce)"
+
     log_success "Branding fayllari inject qilindi"
 }
 

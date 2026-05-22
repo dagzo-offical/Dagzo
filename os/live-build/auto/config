@@ -4,8 +4,7 @@
 lb config noauto \
     --architectures amd64 \
     --distribution bookworm \
-    --debian-installer live \
-    --debian-installer-gui true \
+    --debian-installer false \
     --archive-areas "main contrib non-free non-free-firmware" \
     --apt-recommends false \
     --hostname dagzo \
@@ -14,7 +13,7 @@ lb config noauto \
     --iso-volume "Dagzo OS" \
     --iso-publisher "Dagzo Education" \
     --iso-application "Dagzo OS" \
-    --bootappend-live "boot=live components quiet splash" \
+    --bootappend-live "boot=live components quiet splash nomodeset" \
     --binary-images iso-hybrid \
     --memtest none \
     --win32-loader false \

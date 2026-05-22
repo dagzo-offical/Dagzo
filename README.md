@@ -159,13 +159,33 @@ sudo dd if=dist/dagzo-os.iso of=/dev/sdX bs=4M status=progress
 sudo sync
 ```
 
-### 6. QEMU/VirtualBox da sinash
+### 6. VM da sinash
 
+**VirtualBox:**
+1. New > Type: Linux > Version: Debian (64-bit)
+2. RAM: 2048 MB+, Disk: 20 GB+
+3. Settings > Display:
+   - **Graphics Controller: VMSVGA**
+   - **Video Memory: 128 MB**
+   - **3D Acceleration: OFF** (yoqmang — qora ekran bo'lishi mumkin)
+4. Settings > Storage > IDE controller > ISO ni ulang
+5. Boot — Live Dagzo OS session avtomatik ochiladi (installer yo'q)
+
+**VMware:**
+1. New Virtual Machine > Guest OS: Debian 11+ 64-bit
+2. RAM: 2048 MB+
+3. Settings > Display:
+   - **Accelerate 3D graphics: OFF**
+4. ISO ni CD/DVD ga ulang va boot qiling
+
+**QEMU (tez sinash):**
 ```bash
-# QEMU
-qemu-system-x86_64 -m 2048 -cdrom dist/dagzo-os.iso -boot d -vga std
-
-# VirtualBox: New > Debian 64-bit > RAM 2GB+ > Storage > ISO ni ulang
+qemu-system-x86_64 \
+  -m 2048 \
+  -cdrom dist/dagzo-os.iso \
+  -boot d \
+  -vga vmware \
+  -display sdl
 ```
 
 ---
